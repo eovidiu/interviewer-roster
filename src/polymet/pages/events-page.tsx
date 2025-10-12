@@ -13,12 +13,9 @@ import {
 } from "lucide-react";
 import { db } from "@/polymet/data/database-service";
 import type { InterviewEvent } from "@/polymet/data/mock-interview-events-data";
+import { useAuth } from "@/polymet/data/auth-context";
 
-interface EventsPageProps {
-  userRole?: "viewer" | "talent" | "admin";
-}
-
-export function EventsPage({ userRole = "admin" }: EventsPageProps) {
+export function EventsPage() {
   const [events, setEvents] = useState<InterviewEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [markAttendanceDialogOpen, setMarkAttendanceDialogOpen] =
@@ -27,6 +24,8 @@ export function EventsPage({ userRole = "admin" }: EventsPageProps) {
   const [selectedEvent, setSelectedEvent] = useState<InterviewEvent | null>(
     null
   );
+  const { user } = useAuth();
+  const userRole = user?.role ?? "viewer";
 
   useEffect(() => {
     loadEvents();

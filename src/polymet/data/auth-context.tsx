@@ -44,17 +44,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
     const storedUser = localStorage.getItem("auth_user");
     if (storedUser) {
       setUser(JSON.parse(storedUser));
-    } else {
-      // For demo purposes, simulate a logged-in user
-      // In production, this would redirect to login or show a login screen
-      const mockUser: User = {
-        name: "Sarah Chen",
-        email: "sarah.chen@company.com",
-        picture: "https://github.com/yusufhilmi.png",
-        role: "admin",
-      };
-      setUser(mockUser);
-      localStorage.setItem("auth_user", JSON.stringify(mockUser));
     }
     setIsLoading(false);
   }, []);

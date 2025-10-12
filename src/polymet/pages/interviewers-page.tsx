@@ -12,20 +12,17 @@ import {
 } from "lucide-react";
 import { db } from "@/polymet/data/database-service";
 import type { Interviewer } from "@/polymet/data/mock-interviewers-data";
+import { useAuth } from "@/polymet/data/auth-context";
 
-interface InterviewersPageProps {
-  userRole?: "viewer" | "talent" | "admin";
-}
-
-export function InterviewersPage({
-  userRole = "admin",
-}: InterviewersPageProps) {
+export function InterviewersPage() {
   const [interviewers, setInterviewers] = useState<Interviewer[]>([]);
   const [loading, setLoading] = useState(true);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [exportDialogOpen, setExportDialogOpen] = useState(false);
   const [editingInterviewer, setEditingInterviewer] =
     useState<Interviewer | null>(null);
+  const { user } = useAuth();
+  const userRole = user?.role ?? "viewer";
 
   useEffect(() => {
     loadInterviewers();
