@@ -12,6 +12,11 @@ import {
   ClockIcon,
 } from "lucide-react";
 import { db } from "@/polymet/data/database-service";
+import {
+  exportAuditLogsCsv,
+  exportEventsCsv,
+  exportInterviewersCsv,
+} from "@/lib/csv-utils";
 import type { InterviewEvent } from "@/polymet/data/mock-interview-events-data";
 import { useAuth } from "@/polymet/data/auth-context";
 
@@ -85,9 +90,30 @@ export function EventsPage() {
     }
   };
 
-  const handleExport = (type: string, anonymize: boolean) => {
-    console.log("Export:", { type, anonymize });
-    // In real app, generate and download CSV
+  const handleExport = async (type: string) => {
+    try {
+      if (type === "events") {
+        exportEventsCsv(events);
+        return;
+      }
+
+      if (type === "interviewers") {
+        const roster = await db.getInterviewers();
+        exportInterviewersCsv(roster);
+        return;
+      }
+
+      if (type === "audit_logs") {
+        const logs = await db.getAuditLogs();
+        exportAuditLogsCsv(logs);
+        return;
+      }
+
+      alert("Unsupported export type selected.");
+    } catch (error) {
+      console.error("Failed to export data:", error);
+      alert("Failed to export data. Please try again.");
+    }
   };
 
   if (loading) {
