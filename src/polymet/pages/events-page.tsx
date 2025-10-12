@@ -26,6 +26,9 @@ export function EventsPage() {
   );
   const { user } = useAuth();
   const userRole = user?.role ?? "viewer";
+  const auditContext = user
+    ? { userEmail: user.email, userName: user.name }
+    : undefined;
 
   useEffect(() => {
     loadEvents();
@@ -64,7 +67,16 @@ export function EventsPage() {
     notes: string
   ) => {
     try {
-      await db.updateInterviewEvent(eventId, { status, notes });
+      await db.updateInterviewEvent(
+        eventId,
+        {
+          status,
+          notes,
+          marked_by: user?.email,
+          marked_at: new Date().toISOString(),
+        },
+        auditContext
+      );
       await loadEvents();
       setMarkAttendanceDialogOpen(false);
     } catch (error) {

@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { AuditLogTable } from "@/polymet/components/audit-log-table";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,24 +9,84 @@ import {
   EditIcon,
   TrashIcon,
 } from "lucide-react";
-import { mockAuditLogs } from "@/polymet/data/mock-audit-logs-data";
+import { db, type AuditLog } from "@/polymet/data/database-service";
 
 export function AuditLogsPage() {
-  const totalLogs = mockAuditLogs.length;
-  const createActions = mockAuditLogs.filter(
-    (l) => l.action === "CREATE"
-  ).length;
-  const updateActions = mockAuditLogs.filter(
-    (l) => l.action === "UPDATE"
-  ).length;
-  const deleteActions = mockAuditLogs.filter(
-    (l) => l.action === "DELETE"
-  ).length;
+  const [logs, setLogs] = useState<AuditLog[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const loadLogs = async () => {
+      try {
+        setLoading(true);
+        const data = await db.getAuditLogs();
+        setLogs(data);
+      } catch (error) {
+        console.error("Failed to load audit logs:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadLogs();
+  }, []);
+
+  const totalLogs = logs.length;
+  const createActions = logs.filter((l) => l.action.includes("CREATE")).length;
+  const updateActions = logs.filter((l) => l.action.includes("UPDATE")).length;
+  const deleteActions = logs.filter((l) => l.action.includes("DELETE")).length;
 
   const handleExport = () => {
-    console.log("Export audit logs");
-    // In real app, generate and download CSV
+    if (logs.length === 0) {
+      alert("No audit logs available to export.");
+      return;
+    }
+
+    const headers = [
+      "timestamp",
+      "user_name",
+      "user_email",
+      "action",
+      "entity_type",
+      "entity_id",
+      "changes",
+    ];
+    const rows = logs.map((log) => [
+      log.timestamp,
+      log.user_name,
+      log.user_email,
+      log.action,
+      log.entity_type,
+      log.entity_id,
+      JSON.stringify(log.changes ?? {}, null, 2),
+    ]);
+    const csv = [headers, ...rows]
+      .map((line) => line.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(","))
+      .join("\n");
+
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `audit-logs-${Date.now()}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold">Audit Logs</h1>
+          <p className="text-muted-foreground mt-2">
+            Loading audit activity…
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -132,7 +193,7 @@ export function AuditLogsPage() {
           <CardTitle>System Activity Log</CardTitle>
         </CardHeader>
         <CardContent>
-          <AuditLogTable logs={mockAuditLogs} />
+          <AuditLogTable logs={logs} />
         </CardContent>
       </Card>
     </div>

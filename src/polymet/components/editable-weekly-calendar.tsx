@@ -17,17 +17,20 @@ import {
   SaveIcon,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import type { AuditContext } from "@/polymet/data/database-service";
 
 interface EditableWeeklyCalendarProps {
   interviewers?: Interviewer[];
   events?: InterviewEvent[];
   onSave?: (data: Record<string, Record<string, number>>) => void;
+  auditContext?: AuditContext;
 }
 
 export function EditableWeeklyCalendar({
   interviewers = mockInterviewers,
   events = mockInterviewEvents,
   onSave,
+  auditContext,
 }: EditableWeeklyCalendarProps) {
   const [currentWeekStart, setCurrentWeekStart] = useState(() => {
     const today = new Date();
@@ -204,15 +207,18 @@ export function EditableWeeklyCalendar({
               const startTime = new Date(date);
               startTime.setHours(9 + i, 0, 0, 0);
 
-              await db.createInterviewEvent({
-                interviewer_email: interviewerEmail,
-                candidate_name: `Candidate ${Date.now()}-${i}`,
-                position: "Position TBD",
-                start_time: startTime.toISOString(),
-                duration_minutes: 60,
-                status: "pending",
-                notes: "Added via Mark Interviews page",
-              });
+              await db.createInterviewEvent(
+                {
+                  interviewer_email: interviewerEmail,
+                  candidate_name: `Candidate ${Date.now()}-${i}`,
+                  position: "Position TBD",
+                  start_time: startTime.toISOString(),
+                  duration_minutes: 60,
+                  status: "pending",
+                  notes: "Added via Mark Interviews page",
+                },
+                auditContext
+              );
             }
           } else if (targetCount < currentCount) {
             // Remove excess events (remove pending ones first)
@@ -225,7 +231,7 @@ export function EditableWeeklyCalendar({
               .slice(0, currentCount - targetCount);
 
             for (const event of eventsToRemove) {
-              await db.deleteInterviewEvent(event.id);
+              await db.deleteInterviewEvent(event.id, auditContext);
             }
           }
         }
@@ -242,7 +248,7 @@ export function EditableWeeklyCalendar({
     } finally {
       setIsSaving(false);
     }
-  }, [interviewCounts, hasChanges, onSave]);
+  }, [interviewCounts, hasChanges, onSave, auditContext]);
 
   // Debounced auto-save effect
   useEffect(() => {

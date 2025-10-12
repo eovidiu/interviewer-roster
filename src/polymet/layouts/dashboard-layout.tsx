@@ -9,6 +9,7 @@ import {
   CalendarIcon,
   CalendarDaysIcon,
   CalendarCheckIcon,
+  FileTextIcon,
   SettingsIcon,
   DatabaseIcon,
   MenuIcon,
@@ -77,6 +78,12 @@ export function DashboardLayout({
       name: "Database",
       href: "/database",
       icon: DatabaseIcon,
+      roles: ["admin"],
+    },
+    {
+      name: "Audit Logs",
+      href: "/audit-logs",
+      icon: FileTextIcon,
       roles: ["admin"],
     },
     {

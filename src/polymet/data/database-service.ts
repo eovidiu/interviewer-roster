@@ -66,9 +66,45 @@ interface DatabaseStorage {
   auditLogs: AuditLog[];
 }
 
+export interface AuditContext {
+  userEmail: string;
+  userName: string;
+}
+
 class DatabaseService {
   private storageKey = "interview_roster_db";
   private initialized = false;
+
+  private defaultAuditContext: AuditContext = {
+    userEmail: "system@interviewer-roster.local",
+    userName: "System Automation",
+  };
+
+  private resolveAuditContext(context?: AuditContext): AuditContext {
+    if (context?.userEmail && context?.userName) {
+      return context;
+    }
+    return this.defaultAuditContext;
+  }
+
+  private buildChangeSet<T extends Record<string, unknown>>(
+    previous: T,
+    updates: Partial<T>
+  ) {
+    const diff: Record<string, { from: unknown; to: unknown }> = {};
+    Object.entries(updates).forEach(([key, value]) => {
+      if (
+        value !== undefined &&
+        (previous as Record<string, unknown>)[key] !== value
+      ) {
+        diff[key] = {
+          from: (previous as Record<string, unknown>)[key],
+          to: value,
+        };
+      }
+    });
+    return diff;
+  }
 
   /**
    * Initialize the database
@@ -165,7 +201,10 @@ class DatabaseService {
   /**
    * Create a new interviewer
    */
-  async createInterviewer(data: Partial<Interviewer>): Promise<Interviewer> {
+  async createInterviewer(
+    data: Partial<Interviewer>,
+    context?: AuditContext
+  ): Promise<Interviewer> {
     const db = this.getDatabase();
     const now = getCurrentTimestamp();
 
@@ -183,6 +222,17 @@ class DatabaseService {
 
     db.interviewers.push(interviewer);
     this.saveDatabase(db);
+
+    const auditUser = this.resolveAuditContext(context);
+    await this.createAuditLog({
+      user_email: auditUser.userEmail,
+      user_name: auditUser.userName,
+      action: "CREATE_INTERVIEWER",
+      entity_type: "interviewer",
+      entity_id: interviewer.id,
+      changes: interviewer,
+    });
+
     return interviewer;
   }
 
@@ -191,7 +241,8 @@ class DatabaseService {
    */
   async updateInterviewer(
     email: string,
-    data: Partial<Interviewer>
+    data: Partial<Interviewer>,
+    context?: AuditContext
   ): Promise<Interviewer> {
     const db = this.getDatabase();
     const index = db.interviewers.findIndex((i) => i.email === email);
@@ -200,26 +251,54 @@ class DatabaseService {
       throw new Error(`Interviewer with email ${email} not found`);
     }
 
-    db.interviewers[index] = {
-      ...db.interviewers[index],
+    const existing = db.interviewers[index];
+    const updated = {
+      ...existing,
       ...data,
       email, // Ensure email doesn't change
       updated_at: getCurrentTimestamp(),
     };
 
+    db.interviewers[index] = updated;
+
     this.saveDatabase(db);
-    return db.interviewers[index];
+    const auditUser = this.resolveAuditContext(context);
+    const diff = this.buildChangeSet(existing, data);
+    if (Object.keys(diff).length > 0) {
+      await this.createAuditLog({
+        user_email: auditUser.userEmail,
+        user_name: auditUser.userName,
+        action: "UPDATE_INTERVIEWER",
+        entity_type: "interviewer",
+        entity_id: updated.id,
+        changes: diff,
+      });
+    }
+    return updated;
   }
 
   /**
    * Delete an interviewer
    */
-  async deleteInterviewer(email: string): Promise<void> {
+  async deleteInterviewer(email: string, context?: AuditContext): Promise<void> {
     const db = this.getDatabase();
+    const existing = db.interviewers.find((i) => i.email === email);
     db.interviewers = db.interviewers.filter((i) => i.email !== email);
     // Also delete related events
     db.events = db.events.filter((e) => e.interviewer_email !== email);
     this.saveDatabase(db);
+
+    if (existing) {
+      const auditUser = this.resolveAuditContext(context);
+      await this.createAuditLog({
+        user_email: auditUser.userEmail,
+        user_name: auditUser.userName,
+        action: "DELETE_INTERVIEWER",
+        entity_type: "interviewer",
+        entity_id: existing.id,
+        changes: existing,
+      });
+    }
   }
 
   // ==================== INTERVIEW EVENT OPERATIONS ====================
@@ -256,7 +335,8 @@ class DatabaseService {
    * Create a new interview event
    */
   async createInterviewEvent(
-    data: Partial<InterviewEvent>
+    data: Partial<InterviewEvent>,
+    context?: AuditContext
   ): Promise<InterviewEvent> {
     const db = this.getDatabase();
     const now = getCurrentTimestamp();
@@ -282,15 +362,25 @@ class DatabaseService {
 
     db.events.push(event);
     this.saveDatabase(db);
+    const auditUser = this.resolveAuditContext(context);
+    await this.createAuditLog({
+      user_email: auditUser.userEmail,
+      user_name: auditUser.userName,
+      action: "CREATE_EVENT",
+      entity_type: "interview_event",
+      entity_id: event.id,
+      changes: event,
+    });
     return event;
   }
 
   /**
    * Update an interview event
-   */
+  */
   async updateInterviewEvent(
     id: string,
-    data: Partial<InterviewEvent>
+    data: Partial<InterviewEvent>,
+    context?: AuditContext
   ): Promise<InterviewEvent> {
     const db = this.getDatabase();
     const index = db.events.findIndex((e) => e.id === id);
@@ -299,24 +389,52 @@ class DatabaseService {
       throw new Error(`Event with id ${id} not found`);
     }
 
-    db.events[index] = {
-      ...db.events[index],
+    const existing = db.events[index];
+    const updated = {
+      ...existing,
       ...data,
       id, // Ensure id doesn't change
       updated_at: getCurrentTimestamp(),
     };
 
+    db.events[index] = updated;
+
     this.saveDatabase(db);
-    return db.events[index];
+    const auditUser = this.resolveAuditContext(context);
+    const diff = this.buildChangeSet(existing, data);
+    if (Object.keys(diff).length > 0) {
+      await this.createAuditLog({
+        user_email: auditUser.userEmail,
+        user_name: auditUser.userName,
+        action: "UPDATE_EVENT",
+        entity_type: "interview_event",
+        entity_id: updated.id,
+        changes: diff,
+      });
+    }
+    return updated;
   }
 
   /**
    * Delete an interview event
-   */
-  async deleteInterviewEvent(id: string): Promise<void> {
+  */
+  async deleteInterviewEvent(id: string, context?: AuditContext): Promise<void> {
     const db = this.getDatabase();
+    const existing = db.events.find((e) => e.id === id);
     db.events = db.events.filter((e) => e.id !== id);
     this.saveDatabase(db);
+
+    if (existing) {
+      const auditUser = this.resolveAuditContext(context);
+      await this.createAuditLog({
+        user_email: auditUser.userEmail,
+        user_name: auditUser.userName,
+        action: "DELETE_EVENT",
+        entity_type: "interview_event",
+        entity_id: existing.id,
+        changes: existing,
+      });
+    }
   }
 
   // ==================== AUDIT LOG OPERATIONS ====================
