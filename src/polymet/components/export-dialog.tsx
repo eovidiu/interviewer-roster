@@ -10,7 +10,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
   DownloadIcon,
   FileTextIcon,
@@ -22,7 +21,7 @@ interface ExportDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   userRole: "viewer" | "talent" | "admin";
-  onExport: (type: string, anonymize: boolean) => void;
+  onExport: (type: ExportTypeOption) => void;
 }
 
 type ExportTypeOption = "interviewers" | "events" | "audit_logs";
@@ -35,7 +34,6 @@ export function ExportDialog({
 }: ExportDialogProps) {
   const [exportType, setExportType] =
     useState<ExportTypeOption>("interviewers");
-  const [anonymize, setAnonymize] = useState(false);
 
   const handleExportTypeChange = (value: string) => {
     if (
@@ -48,7 +46,7 @@ export function ExportDialog({
   };
 
   const handleExport = () => {
-    onExport(exportType, anonymize);
+    onExport(exportType);
     onOpenChange(false);
   };
 
@@ -59,9 +57,7 @@ export function ExportDialog({
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle>Export Data</DialogTitle>
-          <DialogDescription>
-            Export data to CSV format (RFC 4180 compliant)
-          </DialogDescription>
+          <DialogDescription>Export data to CSV format</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-6 py-4">
@@ -129,43 +125,12 @@ export function ExportDialog({
             </RadioGroup>
           </div>
 
-          {userRole === "viewer" && (
-            <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
-              <div className="flex gap-2">
-                <div className="text-yellow-800 dark:text-yellow-200 text-sm">
-                  <strong>Note:</strong> As a Viewer, exported data will be
-                  automatically anonymized to protect privacy.
-                </div>
-              </div>
-            </div>
-          )}
-
-          {userRole !== "viewer" && (
-            <div className="flex items-center space-x-2 p-3 border border-border rounded-lg">
-              <Checkbox
-                id="anonymize"
-                checked={anonymize}
-                onCheckedChange={(checked) => setAnonymize(checked === true)}
-              />
-
-              <Label htmlFor="anonymize" className="cursor-pointer flex-1">
-                <div className="font-medium">Anonymize Data</div>
-                <div className="text-xs text-muted-foreground">
-                  Remove personally identifiable information from export
-                </div>
-              </Label>
-            </div>
-          )}
-
           <div className="bg-muted p-4 rounded-lg space-y-2">
             <div className="text-sm font-medium">Export Details</div>
             <div className="text-xs text-muted-foreground space-y-1">
               <div>• Format: CSV (RFC 4180)</div>
               <div>• Encoding: UTF-8</div>
               <div>• Date Format: ISO 8601</div>
-              {(userRole === "viewer" || anonymize) && (
-                <div>• Privacy: Anonymized</div>
-              )}
             </div>
           </div>
         </div>

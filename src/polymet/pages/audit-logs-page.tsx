@@ -10,6 +10,7 @@ import {
   TrashIcon,
 } from "lucide-react";
 import { db, type AuditLog } from "@/polymet/data/database-service";
+import { exportAuditLogsCsv } from "@/lib/csv-utils";
 
 export function AuditLogsPage() {
   const [logs, setLogs] = useState<AuditLog[]>([]);
@@ -42,37 +43,12 @@ export function AuditLogsPage() {
       return;
     }
 
-    const headers = [
-      "timestamp",
-      "user_name",
-      "user_email",
-      "action",
-      "entity_type",
-      "entity_id",
-      "changes",
-    ];
-    const rows = logs.map((log) => [
-      log.timestamp,
-      log.user_name,
-      log.user_email,
-      log.action,
-      log.entity_type,
-      log.entity_id,
-      JSON.stringify(log.changes ?? {}, null, 2),
-    ]);
-    const csv = [headers, ...rows]
-      .map((line) => line.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(","))
-      .join("\n");
-
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `audit-logs-${Date.now()}.csv`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+    try {
+      exportAuditLogsCsv(logs);
+    } catch (error) {
+      console.error("Failed to export audit logs:", error);
+      alert("Failed to export audit logs. Please try again.");
+    }
   };
 
   if (loading) {

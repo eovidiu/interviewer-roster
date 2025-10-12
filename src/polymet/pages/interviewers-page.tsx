@@ -11,6 +11,11 @@ import {
   CheckCircle2Icon,
 } from "lucide-react";
 import { db } from "@/polymet/data/database-service";
+import {
+  exportAuditLogsCsv,
+  exportEventsCsv,
+  exportInterviewersCsv,
+} from "@/lib/csv-utils";
 import type { Interviewer } from "@/polymet/data/mock-interviewers-data";
 import { useAuth } from "@/polymet/data/auth-context";
 
@@ -103,9 +108,30 @@ export function InterviewersPage() {
     }
   };
 
-  const handleExport = (type: string, anonymize: boolean) => {
-    console.log("Export:", { type, anonymize });
-    // In real app, generate and download CSV
+  const handleExport = async (type: string) => {
+    try {
+      if (type === "interviewers") {
+        exportInterviewersCsv(interviewers);
+        return;
+      }
+
+      if (type === "events") {
+        const allEvents = await db.getInterviewEvents();
+        exportEventsCsv(allEvents);
+        return;
+      }
+
+      if (type === "audit_logs") {
+        const logs = await db.getAuditLogs();
+        exportAuditLogsCsv(logs);
+        return;
+      }
+
+      alert("Unsupported export type selected.");
+    } catch (error) {
+      console.error("Failed to export data:", error);
+      alert("Failed to export data. Please try again.");
+    }
   };
 
   const canAddEdit = userRole === "admin" || userRole === "talent";

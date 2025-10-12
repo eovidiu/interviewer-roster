@@ -30,6 +30,13 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { useAuth } from "@/polymet/data/auth-context";
+import {
+  mapCsvRowsToAuditLogs,
+  mapCsvRowsToEvents,
+  mapCsvRowsToInterviewers,
+  parseCsvFile,
+} from "@/lib/csv-utils";
 
 export function DatabaseManagementPage() {
   const [stats, setStats] = useState({
@@ -40,6 +47,9 @@ export function DatabaseManagementPage() {
   const [loading, setLoading] = useState(true);
   const [showResetDialog, setShowResetDialog] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const { user } = useAuth();
+  const auditUserEmail = user?.email ?? "admin@company.com";
+  const auditUserName = user?.name ?? "Admin";
 
   useEffect(() => {
     // Ensure database is initialized before loading stats
@@ -85,17 +95,17 @@ export function DatabaseManagementPage() {
       a.click();
       URL.revokeObjectURL(url);
 
-      // Log audit
       await db.createAuditLog({
-        user_email: "admin@company.com",
-        user_name: "Admin",
-        action: "export_data",
+        user_email: auditUserEmail,
+        user_name: auditUserName,
+        action: "EXPORT_DATA",
         entity_type: "database",
         entity_id: "full_export",
-        changes: { exported_at: new Date().toISOString() },
+        changes: { exported_at: new Date().toISOString(), format: "json" },
       });
 
       await loadStats();
+      alert("Backup exported successfully.");
     } catch (error) {
       console.error("Failed to export data:", error);
       alert("Failed to export data. Please try again.");
@@ -106,60 +116,130 @@ export function DatabaseManagementPage() {
     try {
       const input = document.createElement("input");
       input.type = "file";
-      input.accept = ".json";
+      input.accept = ".json,.csv";
       input.onchange = async (e) => {
         const file = (e.target as HTMLInputElement).files?.[0];
         if (!file) return;
 
-        const reader = new FileReader();
-        reader.onload = async (event) => {
-          try {
-            const data = JSON.parse(event.target?.result as string);
+        try {
+          if (file.name.toLowerCase().endsWith(".csv")) {
+            const { dataset, rows } = await parseCsvFile(file);
+            let message = "";
 
-            // Validate data structure
-            if (!data.interviewers && !data.events && !data.auditLogs) {
-              alert(
-                "Invalid backup file format. File must contain at least one of: interviewers, events, or auditLogs."
-              );
-              return;
+            if (dataset === "interviewers") {
+              const interviewers = mapCsvRowsToInterviewers(rows);
+              const result = await db.importData({ interviewers });
+
+              await db.createAuditLog({
+                user_email: auditUserEmail,
+                user_name: auditUserName,
+                action: "IMPORT_INTERVIEWERS_CSV",
+                entity_type: "database",
+                entity_id: "interviewers_csv_import",
+                changes: {
+                  imported: result.imported.interviewers,
+                  skipped: result.skipped.interviewers,
+                  imported_at: new Date().toISOString(),
+                  file: file.name,
+                },
+              });
+
+              message =
+                `Imported interviewers: ${result.imported.interviewers}` +
+                ` (skipped: ${result.skipped.interviewers})`;
+            } else if (dataset === "events") {
+              const events = mapCsvRowsToEvents(rows);
+              const result = await db.importData({ events });
+
+              await db.createAuditLog({
+                user_email: auditUserEmail,
+                user_name: auditUserName,
+                action: "IMPORT_EVENTS_CSV",
+                entity_type: "database",
+                entity_id: "events_csv_import",
+                changes: {
+                  imported: result.imported.events,
+                  skipped: result.skipped.events,
+                  imported_at: new Date().toISOString(),
+                  file: file.name,
+                },
+              });
+
+              message =
+                `Imported events: ${result.imported.events}` +
+                ` (skipped: ${result.skipped.events})`;
+            } else {
+              const auditLogs = mapCsvRowsToAuditLogs(rows);
+              const result = await db.importData({ auditLogs });
+
+              await db.createAuditLog({
+                user_email: auditUserEmail,
+                user_name: auditUserName,
+                action: "IMPORT_AUDIT_LOGS_CSV",
+                entity_type: "database",
+                entity_id: "audit_logs_csv_import",
+                changes: {
+                  imported: result.imported.auditLogs,
+                  skipped: result.skipped.auditLogs,
+                  imported_at: new Date().toISOString(),
+                  file: file.name,
+                },
+              });
+
+              message =
+                `Imported audit logs: ${result.imported.auditLogs}` +
+                ` (skipped: ${result.skipped.auditLogs})`;
             }
 
-            // Import data
-            const result = await db.importData(data);
-
-            // Log audit
-            await db.createAuditLog({
-              user_email: "admin@company.com",
-              user_name: "Admin",
-              action: "import_data",
-              entity_type: "database",
-              entity_id: "full_import",
-              changes: {
-                imported: result.imported,
-                skipped: result.skipped,
-                imported_at: new Date().toISOString(),
-              },
-            });
-
             await loadStats();
-
-            alert(
-              `Import completed!\n\n` +
-                `Imported:\n` +
-                `- Interviewers: ${result.imported.interviewers}\n` +
-                `- Events: ${result.imported.events}\n` +
-                `- Audit Logs: ${result.imported.auditLogs}\n\n` +
-                `Skipped (duplicates):\n` +
-                `- Interviewers: ${result.skipped.interviewers}\n` +
-                `- Events: ${result.skipped.events}\n` +
-                `- Audit Logs: ${result.skipped.auditLogs}`
-            );
-          } catch (error) {
-            console.error("Failed to import data:", error);
-            alert("Failed to import data. Please check the file format.");
+            alert(`CSV import completed:\n\n${message}`);
+            return;
           }
-        };
-        reader.readAsText(file);
+
+          const text = await file.text();
+          const data = JSON.parse(text);
+
+          if (!data.interviewers && !data.events && !data.auditLogs) {
+            alert(
+              "Invalid backup file format. File must contain at least one of: interviewers, events, or auditLogs."
+            );
+            return;
+          }
+
+          const result = await db.importData(data);
+
+          await db.createAuditLog({
+            user_email: auditUserEmail,
+            user_name: auditUserName,
+            action: "IMPORT_DATA",
+            entity_type: "database",
+            entity_id: "full_import",
+            changes: {
+              imported: result.imported,
+              skipped: result.skipped,
+              imported_at: new Date().toISOString(),
+              file: file.name,
+              format: "json",
+            },
+          });
+
+          await loadStats();
+
+          alert(
+            `Import completed!\n\n` +
+              `Imported:\n` +
+              `- Interviewers: ${result.imported.interviewers}\n` +
+              `- Events: ${result.imported.events}\n` +
+              `- Audit Logs: ${result.imported.auditLogs}\n\n` +
+              `Skipped (duplicates):\n` +
+              `- Interviewers: ${result.skipped.interviewers}\n` +
+              `- Events: ${result.skipped.events}\n` +
+              `- Audit Logs: ${result.skipped.auditLogs}`
+          );
+        } catch (error) {
+          console.error("Failed to import data:", error);
+          alert("Failed to import data. Please check the file format.");
+        }
       };
       input.click();
     } catch (error) {
@@ -213,9 +293,9 @@ export function DatabaseManagementPage() {
 
       // Log audit AFTER import (so it doesn't get wiped)
       await db.createAuditLog({
-        user_email: "admin@company.com",
-        user_name: "Admin",
-        action: "import_mock_data",
+        user_email: auditUserEmail,
+        user_name: auditUserName,
+        action: "IMPORT_MOCK_DATA",
         entity_type: "database",
         entity_id: "mock_import",
         changes: {
