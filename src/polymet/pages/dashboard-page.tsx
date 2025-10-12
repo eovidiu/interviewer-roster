@@ -1,0 +1,258 @@
+import { useState, useEffect } from "react";
+import { KpiMetricCard } from "@/polymet/components/kpi-metric-card";
+import { StatusBadge } from "@/polymet/components/status-badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import {
+  ActivityIcon,
+  CalendarIcon,
+  UsersIcon,
+  TrendingUpIcon,
+  ClockIcon,
+  AlertCircleIcon,
+} from "lucide-react";
+import { db } from "@/polymet/data/database-service";
+import type { InterviewEvent } from "@/polymet/data/mock-interview-events-data";
+import type { Interviewer } from "@/polymet/data/mock-interviewers-data";
+
+export function DashboardPage() {
+  const [interviewEvents, setInterviewEvents] = useState<InterviewEvent[]>([]);
+  const [interviewers, setInterviewers] = useState<Interviewer[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const loadData = async () => {
+    try {
+      setLoading(true);
+      const [eventsData, interviewersData] = await Promise.all([
+        db.getInterviewEvents(),
+        db.getInterviewers(),
+      ]);
+      setInterviewEvents(eventsData);
+      setInterviewers(interviewersData);
+    } catch (error) {
+      console.error("Failed to load dashboard data:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="space-y-8">
+        <div>
+          <h1 className="text-3xl font-bold">Dashboard</h1>
+          <p className="text-muted-foreground mt-2">
+            Loading dashboard data...
+          </p>
+        </div>
+      </div>
+    );
+  }
+  // Calculate KPIs
+  const totalEvents = interviewEvents.length;
+  const attendedEvents = interviewEvents.filter(
+    (e) => e.status === "attended"
+  ).length;
+  const ghostedEvents = interviewEvents.filter(
+    (e) => e.status === "ghosted"
+  ).length;
+  const pendingEvents = interviewEvents.filter(
+    (e) => e.status === "pending"
+  ).length;
+  const noShowRate =
+    totalEvents > 0 ? ((ghostedEvents / totalEvents) * 100).toFixed(1) : "0.0";
+
+  const activeInterviewers = interviewers.filter((i) => i.is_active).length;
+  const calendarSyncEnabled = interviewers.filter(
+    (i) => i.calendar_sync_enabled
+  ).length;
+
+  // Calculate interviews per week per interviewer
+  const interviewsPerWeek =
+    activeInterviewers > 0
+      ? (totalEvents / activeInterviewers / 4).toFixed(1)
+      : "0.0";
+
+  // Recent events
+  const recentEvents = interviewEvents
+    .sort(
+      (a, b) =>
+        new Date(b.start_time).getTime() - new Date(a.start_time).getTime()
+    )
+    .slice(0, 5);
+
+  const formatDateTime = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleString("en-US", {
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
+
+  return (
+    <div className="space-y-8">
+      {/* Header */}
+      <div>
+        <h1 className="text-3xl font-bold">Dashboard</h1>
+        <p className="text-muted-foreground mt-2">
+          Overview of interview scheduling and roster management
+        </p>
+      </div>
+
+      {/* KPI Metrics */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <KpiMetricCard
+          title="No-Show Rate"
+          value={`${noShowRate}%`}
+          target="< 2%"
+          trend={parseFloat(noShowRate) < 2 ? "down" : "up"}
+          trendValue="0.6%"
+          icon={ActivityIcon}
+          status={parseFloat(noShowRate) < 2 ? "success" : "danger"}
+          description="vs last month"
+        />
+
+        <KpiMetricCard
+          title="Interviews per Week"
+          value={interviewsPerWeek}
+          target="3-5"
+          trend="up"
+          trendValue="0.8"
+          icon={CalendarIcon}
+          status={
+            parseFloat(interviewsPerWeek) >= 3 &&
+            parseFloat(interviewsPerWeek) <= 5
+              ? "success"
+              : "warning"
+          }
+          description="per interviewer"
+        />
+
+        <KpiMetricCard
+          title="Active Interviewers"
+          value={activeInterviewers}
+          icon={UsersIcon}
+          status="neutral"
+          description={`${calendarSyncEnabled} with calendar sync`}
+        />
+
+        <KpiMetricCard
+          title="System Uptime"
+          value="99.8%"
+          target="> 99.5%"
+          trend="neutral"
+          icon={TrendingUpIcon}
+          status="success"
+          description="Last 30 days"
+        />
+      </div>
+
+      {/* Quick Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">
+              Pending Interviews
+            </CardTitle>
+            <ClockIcon className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{pendingEvents}</div>
+            <p className="text-xs text-muted-foreground mt-1">
+              Require attention
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">
+              Completed This Month
+            </CardTitle>
+            <CalendarIcon className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{attendedEvents}</div>
+            <p className="text-xs text-muted-foreground mt-1">
+              Successfully conducted
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">No Shows</CardTitle>
+            <AlertCircleIcon className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{ghostedEvents}</div>
+            <p className="text-xs text-muted-foreground mt-1">
+              Candidates didn't attend
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Recent Events */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle>Recent Interview Events</CardTitle>
+            <Button variant="outline" size="sm">
+              View All
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            {recentEvents.map((event) => (
+              <div
+                key={event.id}
+                className="flex items-center justify-between p-4 border border-border rounded-lg hover:bg-muted/50 transition-colors"
+              >
+                <div className="space-y-1">
+                  <div className="font-medium">{event.interviewer_email}</div>
+                  <div className="text-sm text-muted-foreground">
+                    {formatDateTime(event.start_time)}
+                  </div>
+                  {event.skills_assessed &&
+                    event.skills_assessed.length > 0 && (
+                      <div className="text-xs text-muted-foreground">
+                        Skills: {event.skills_assessed.join(", ")}
+                      </div>
+                    )}
+                </div>
+                <StatusBadge status={event.status} />
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Quick Actions */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Quick Actions</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Button className="w-full">
+              <UsersIcon className="h-4 w-4 mr-2" />
+              Add Interviewer
+            </Button>
+            <Button variant="outline" className="w-full">
+              <ActivityIcon className="h-4 w-4 mr-2" />
+              View Reports
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
