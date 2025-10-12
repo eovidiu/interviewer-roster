@@ -27,7 +27,10 @@ Log in with the **Sign in with Google** button; the mock OAuth flow provisions a
 - `npm run lint` – run ESLint on all TypeScript and TSX files.
 - `npm test` – execute Vitest + React Testing Library smoke tests that mount the router and verify seeded data renders on the dashboard, interviewers, and events pages.
 
-All commands should finish without errors before opening a pull request.
+- The database service waits for its bootstrap to finish before resolving queries, so first-run sessions immediately show the mock interviewers and events.
+- Use **Database → Import Mock Data** in the UI to reload the demo dataset; the confirmation dialog ensures you do not accidentally overwrite custom data.
+- Clearing the store via **Database → Clear Database** leaves the UI empty until you import mock data or load a backup.
+- Data persists per browser profile; clear the `localStorage` key `interview_roster_db` to simulate a brand new browser profile.
 
 ## Data Seeding & Persistence
 - The app seeds `interview_roster_db` in `localStorage` the first time it loads (or whenever the database key is missing). Mock data lives in `src/polymet/data/mock-*.ts`.
