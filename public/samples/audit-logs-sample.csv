@@ -1,0 +1,3 @@
+id,timestamp,user_name,user_email,action,entity_type,entity_id,changes
+log-demo-001,2024-03-01T12:00:00Z,Sarah Chen,sarah.chen@company.com,UPDATE_INTERVIEWER,interviewer,int-demo-002,"{""is_active"":{""from"":true,""to"":false}}"
+log-demo-002,2024-03-02T09:30:00Z,Michael Rodriguez,michael.rodriguez@company.com,CREATE_EVENT,interview_event,evt-demo-002,"{""candidate_name"":""Alex Johnson"",""position"":""Full Stack Engineer""}"
