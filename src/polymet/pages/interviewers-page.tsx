@@ -23,6 +23,9 @@ export function InterviewersPage() {
     useState<Interviewer | null>(null);
   const { user } = useAuth();
   const userRole = user?.role ?? "viewer";
+  const auditContext = user
+    ? { userEmail: user.email, userName: user.name }
+    : undefined;
 
   useEffect(() => {
     loadInterviewers();
@@ -52,7 +55,7 @@ export function InterviewersPage() {
   const handleDelete = async (interviewer: Interviewer) => {
     if (confirm(`Are you sure you want to delete ${interviewer.name}?`)) {
       try {
-        await db.deleteInterviewer(interviewer.email);
+        await db.deleteInterviewer(interviewer.email, auditContext);
         await loadInterviewers();
       } catch (error) {
         console.error("Failed to delete interviewer:", error);
@@ -63,9 +66,13 @@ export function InterviewersPage() {
 
   const handleToggleActive = async (interviewer: Interviewer) => {
     try {
-      await db.updateInterviewer(interviewer.email, {
-        is_active: !interviewer.is_active,
-      });
+      await db.updateInterviewer(
+        interviewer.email,
+        {
+          is_active: !interviewer.is_active,
+        },
+        auditContext
+      );
       await loadInterviewers();
     } catch (error) {
       console.error("Failed to toggle interviewer status:", error);
@@ -76,10 +83,15 @@ export function InterviewersPage() {
   const handleAddInterviewer = async (data: Partial<Interviewer>) => {
     try {
       if (editingInterviewer) {
-        await db.updateInterviewer(editingInterviewer.email, data);
+        await db.updateInterviewer(
+          editingInterviewer.email,
+          data,
+          auditContext
+        );
       } else {
         await db.createInterviewer(
-          data as Omit<Interviewer, "id" | "created_at" | "updated_at">
+          data as Omit<Interviewer, "id" | "created_at" | "updated_at">,
+          auditContext
         );
       }
       await loadInterviewers();

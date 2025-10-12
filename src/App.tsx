@@ -15,6 +15,7 @@ import { SchedulePage } from "@/polymet/pages/schedule-page";
 import { MarkInterviewsPage } from "@/polymet/pages/mark-interviews-page";
 import { SettingsPage } from "@/polymet/pages/settings-page";
 import { DatabaseManagementPage } from "@/polymet/pages/database-management-page";
+import { AuditLogsPage } from "@/polymet/pages/audit-logs-page";
 import { LoginPage } from "@/polymet/pages/login-page";
 import { useAuth } from "@/polymet/data/auth-context";
 
@@ -134,6 +135,16 @@ export default function InterviewRosterApp() {
               <ProtectedRoute allowedRoles={["admin"]}>
                 <DashboardLayout>
                   <DatabaseManagementPage />
+                </DashboardLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/audit-logs"
+            element={
+              <ProtectedRoute allowedRoles={["admin"]}>
+                <DashboardLayout>
+                  <AuditLogsPage />
                 </DashboardLayout>
               </ProtectedRoute>
             }

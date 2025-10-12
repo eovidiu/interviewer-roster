@@ -3,11 +3,16 @@ import { EditableWeeklyCalendar } from "@/polymet/components/editable-weekly-cal
 import { db } from "@/polymet/data/database-service";
 import type { Interviewer } from "@/polymet/data/mock-interviewers-data";
 import type { InterviewEvent } from "@/polymet/data/mock-interview-events-data";
+import { useAuth } from "@/polymet/data/auth-context";
 
 export function MarkInterviewsPage() {
   const [interviewers, setInterviewers] = useState<Interviewer[]>([]);
   const [events, setEvents] = useState<InterviewEvent[]>([]);
   const [loading, setLoading] = useState(true);
+  const { user } = useAuth();
+  const auditContext = user
+    ? { userEmail: user.email, userName: user.name }
+    : undefined;
 
   // Load data from database
   useEffect(() => {
@@ -68,6 +73,7 @@ export function MarkInterviewsPage() {
         interviewers={interviewers}
         events={events}
         onSave={handleSave}
+        auditContext={auditContext}
       />
     </div>
   );

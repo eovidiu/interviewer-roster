@@ -18,7 +18,7 @@ import {
   TrashIcon,
   DownloadIcon,
 } from "lucide-react";
-import { AuditLog } from "@/polymet/data/mock-audit-logs-data";
+import type { AuditLog } from "@/polymet/data/database-service";
 
 interface AuditLogTableProps {
   logs: AuditLog[];
@@ -31,42 +31,35 @@ export function AuditLogTable({ logs }: AuditLogTableProps) {
   const filteredLogs = logs.filter((log) => {
     const matchesSearch =
       log.user_email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      log.entity.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      log.user_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      log.entity_type.toLowerCase().includes(searchQuery.toLowerCase()) ||
       log.action.toLowerCase().includes(searchQuery.toLowerCase());
 
-    const matchesAction = actionFilter === "all" || log.action === actionFilter;
+    const matchesAction =
+      actionFilter === "all" ||
+      log.action.toUpperCase().startsWith(actionFilter.toUpperCase());
 
     return matchesSearch && matchesAction;
   });
 
   const getActionIcon = (action: string) => {
-    switch (action) {
-      case "CREATE":
-        return PlusCircleIcon;
-      case "UPDATE":
-        return EditIcon;
-      case "DELETE":
-        return TrashIcon;
-      case "EXPORT":
-        return DownloadIcon;
-      default:
-        return FileTextIcon;
-    }
+    if (action.startsWith("CREATE")) return PlusCircleIcon;
+    if (action.startsWith("UPDATE")) return EditIcon;
+    if (action.startsWith("DELETE")) return TrashIcon;
+    if (action.startsWith("EXPORT")) return DownloadIcon;
+    return FileTextIcon;
   };
 
   const getActionColor = (action: string) => {
-    switch (action) {
-      case "CREATE":
-        return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 border-green-200 dark:border-green-800";
-      case "UPDATE":
-        return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 border-blue-200 dark:border-blue-800";
-      case "DELETE":
-        return "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200 border-red-200 dark:border-red-800";
-      case "EXPORT":
-        return "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200 border-purple-200 dark:border-purple-800";
-      default:
-        return "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200 border-gray-200 dark:border-gray-700";
-    }
+    if (action.startsWith("CREATE"))
+      return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 border-green-200 dark:border-green-800";
+    if (action.startsWith("UPDATE"))
+      return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 border-blue-200 dark:border-blue-800";
+    if (action.startsWith("DELETE"))
+      return "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200 border-red-200 dark:border-red-800";
+    if (action.startsWith("EXPORT"))
+      return "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200 border-purple-200 dark:border-purple-800";
+    return "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200 border-gray-200 dark:border-gray-700";
   };
 
   const formatDateTime = (dateString: string) => {
@@ -96,7 +89,7 @@ export function AuditLogTable({ logs }: AuditLogTableProps) {
     );
   };
 
-  const formatChanges = (changes: Record<string, unknown> | null) => {
+  const formatChanges = (changes: Record<string, unknown> | null | undefined) => {
     if (!changes) return "-";
 
     const entries = Object.entries(changes);
@@ -173,14 +166,13 @@ export function AuditLogTable({ logs }: AuditLogTableProps) {
               <TableHead>Action</TableHead>
               <TableHead>Entity</TableHead>
               <TableHead>Changes</TableHead>
-              <TableHead>IP Address</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {filteredLogs.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={6}
+                  colSpan={5}
                   className="text-center text-muted-foreground py-8"
                 >
                   No audit logs found
@@ -204,7 +196,10 @@ export function AuditLogTable({ logs }: AuditLogTableProps) {
                       </div>
                     </TableCell>
                     <TableCell>
-                      <div className="text-sm">{log.user_email}</div>
+                      <div className="text-sm font-medium">{log.user_name}</div>
+                      <div className="text-xs text-muted-foreground">
+                        {log.user_email}
+                      </div>
                     </TableCell>
                     <TableCell>
                       <Badge
@@ -213,13 +208,13 @@ export function AuditLogTable({ logs }: AuditLogTableProps) {
                       >
                         <ActionIcon className="w-3 h-3 mr-1" />
 
-                        {log.action}
+                        {log.action.replace(/_/g, " ")}
                       </Badge>
                     </TableCell>
                     <TableCell>
                       <div className="space-y-1">
                         <div className="text-sm font-medium capitalize">
-                          {log.entity}
+                          {log.entity_type}
                         </div>
                         <div className="text-xs text-muted-foreground">
                           {log.entity_id}
@@ -232,11 +227,6 @@ export function AuditLogTable({ logs }: AuditLogTableProps) {
                         title={formatChanges(log.changes)}
                       >
                         {formatChanges(log.changes)}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="text-sm text-muted-foreground">
-                        {log.ip_address}
                       </div>
                     </TableCell>
                   </TableRow>
