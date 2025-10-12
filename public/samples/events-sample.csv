@@ -1,0 +1,3 @@
+id,interviewer_email,candidate_name,position,start_time,end_time,status,skills_assessed,notes,marked_by,marked_at,created_at,updated_at,duration_minutes
+evt-demo-001,sarah.chen@company.com,Jane Smith,Frontend Developer,2024-02-15T10:00:00Z,2024-02-15T11:00:00Z,pending,"React;System Design","Initial technical screen",,,"2024-02-01T09:00:00Z","2024-02-01T09:00:00Z",60
+evt-demo-002,michael.rodriguez@company.com,Alex Johnson,Full Stack Engineer,2024-02-16T14:00:00Z,2024-02-16T15:00:00Z,attended,"Node.js;API Development","Great problem solving",michael.rodriguez@company.com,2024-02-16T16:10:00Z,"2024-02-05T08:30:00Z","2024-02-16T16:10:00Z",60

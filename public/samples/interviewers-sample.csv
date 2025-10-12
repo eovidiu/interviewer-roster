@@ -1,0 +1,3 @@
+id,name,email,role,skills,is_active,timezone,calendar_sync_enabled,calendar_sync_consent_at,last_synced_at,created_at,updated_at,created_by,modified_at,modified_by
+int-demo-001,Sarah Chen,sarah.chen@company.com,admin,"React;TypeScript",true,America/Los_Angeles,true,2024-01-15T10:30:00Z,2024-03-20T14:22:00Z,2024-01-10T09:00:00Z,2024-03-20T14:22:00Z,system@company.com,2024-03-15T11:20:00Z,sarah.chen@company.com
+int-demo-002,Michael Rodriguez,michael.rodriguez@company.com,talent,"Node.js;API Development",true,America/New_York,true,2024-01-20T14:15:00Z,2024-03-20T13:45:00Z,2024-01-18T10:30:00Z,2024-03-10T08:05:00Z,sarah.chen@company.com,2024-03-10T08:05:00Z,michael.rodriguez@company.com

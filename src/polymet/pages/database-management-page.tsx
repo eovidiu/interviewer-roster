@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, type ChangeEvent } from "react";
 import { db } from "@/polymet/data/database-service";
 import { Button } from "@/components/ui/button";
 import {
@@ -32,6 +32,14 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useAuth } from "@/polymet/data/auth-context";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
   mapCsvRowsToAuditLogs,
   mapCsvRowsToEvents,
   mapCsvRowsToInterviewers,
@@ -46,10 +54,84 @@ export function DatabaseManagementPage() {
   });
   const [loading, setLoading] = useState(true);
   const [showResetDialog, setShowResetDialog] = useState(false);
+  const [showImportGuide, setShowImportGuide] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const { user } = useAuth();
   const auditUserEmail = user?.email ?? "admin@company.com";
   const auditUserName = user?.name ?? "Admin";
+  const csvGuides = [
+    {
+      key: "interviewers",
+      title: "Interviewers CSV",
+      description:
+        "Seeds roster data including roles, skills, and availability flags.",
+      columns: [
+        "id (optional, auto-generated when omitted)",
+        "name (required)",
+        "email (required, must be unique)",
+        "role (viewer | talent | admin)",
+        "skills (semicolon separated list)",
+        "is_active (true | false)",
+        "timezone (IANA identifier)",
+        "calendar_sync_enabled (true | false)",
+        "calendar_sync_consent_at (ISO timestamp, optional)",
+        "last_synced_at (ISO timestamp, optional)",
+        "created_at (ISO timestamp, optional)",
+        "updated_at (ISO timestamp, optional)",
+        "created_by (email, optional)",
+        "modified_at (ISO timestamp, optional)",
+        "modified_by (email, optional)",
+      ],
+      sample:
+        'int-demo-001,Sarah Chen,sarah.chen@company.com,admin,"React;TypeScript",true,America/Los_Angeles,true,2024-01-15T10:30:00Z,2024-03-20T14:22:00Z,2024-01-10T09:00:00Z,2024-03-20T14:22:00Z,system@company.com,2024-03-15T11:20:00Z,sarah.chen@company.com',
+      samplePath: "/samples/interviewers-sample.csv",
+    },
+    {
+      key: "events",
+      title: "Interview Events CSV",
+      description:
+        "Imports scheduled interviews, attendance status, and metadata.",
+      columns: [
+        "id (optional, auto-generated when omitted)",
+        "interviewer_email (required, must reference an existing interviewer)",
+        "candidate_name (optional)",
+        "position (optional)",
+        "start_time (required, ISO timestamp)",
+        "end_time (required, ISO timestamp)",
+        "status (pending | attended | ghosted | cancelled)",
+        "skills_assessed (semicolon separated list)",
+        "notes (optional)",
+        "marked_by (email, optional)",
+        "marked_at (ISO timestamp, optional)",
+        "created_at (ISO timestamp, optional)",
+        "updated_at (ISO timestamp, optional)",
+        "duration_minutes (integer, optional)",
+      ],
+      sample:
+        'evt-demo-001,sarah.chen@company.com,Jane Smith,Frontend Developer,2024-02-15T10:00:00Z,2024-02-15T11:00:00Z,pending,"React;System Design","Initial technical screen",,,"2024-02-01T09:00:00Z","2024-02-01T09:00:00Z",60',
+      samplePath: "/samples/events-sample.csv",
+    },
+    {
+      key: "auditLogs",
+      title: "Audit Logs CSV",
+      description:
+        "Replays audit history with optional change payloads for compliance.",
+      columns: [
+        "id (optional, auto-generated when omitted)",
+        "timestamp (required, ISO timestamp)",
+        "user_name (required)",
+        "user_email (required)",
+        "action (required, e.g. CREATE_INTERVIEWER)",
+        "entity_type (required, e.g. interviewer)",
+        "entity_id (required)",
+        "changes (JSON string describing before/after values)",
+      ],
+      sample:
+        'log-demo-001,2024-03-01T12:00:00Z,Sarah Chen,sarah.chen@company.com,UPDATE_INTERVIEWER,interviewer,int-demo-002,"{\\"is_active\\":{\\"from\\":true,\\"to\\":false}}"',
+      samplePath: "/samples/audit-logs-sample.csv",
+    },
+  ];
 
   useEffect(() => {
     // Ensure database is initialized before loading stats
@@ -112,138 +194,138 @@ export function DatabaseManagementPage() {
     }
   };
 
-  const handleImport = async () => {
+  const openFilePicker = () => {
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+      fileInputRef.current.click();
+    }
+  };
+
+  const handleFileSelected = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+
     try {
-      const input = document.createElement("input");
-      input.type = "file";
-      input.accept = ".json,.csv";
-      input.onchange = async (e) => {
-        const file = (e.target as HTMLInputElement).files?.[0];
-        if (!file) return;
+      if (file.name.toLowerCase().endsWith(".csv")) {
+        const { dataset, rows } = await parseCsvFile(file);
+        let message = "";
 
-        try {
-          if (file.name.toLowerCase().endsWith(".csv")) {
-            const { dataset, rows } = await parseCsvFile(file);
-            let message = "";
-
-            if (dataset === "interviewers") {
-              const interviewers = mapCsvRowsToInterviewers(rows);
-              const result = await db.importData({ interviewers });
-
-              await db.createAuditLog({
-                user_email: auditUserEmail,
-                user_name: auditUserName,
-                action: "IMPORT_INTERVIEWERS_CSV",
-                entity_type: "database",
-                entity_id: "interviewers_csv_import",
-                changes: {
-                  imported: result.imported.interviewers,
-                  skipped: result.skipped.interviewers,
-                  imported_at: new Date().toISOString(),
-                  file: file.name,
-                },
-              });
-
-              message =
-                `Imported interviewers: ${result.imported.interviewers}` +
-                ` (skipped: ${result.skipped.interviewers})`;
-            } else if (dataset === "events") {
-              const events = mapCsvRowsToEvents(rows);
-              const result = await db.importData({ events });
-
-              await db.createAuditLog({
-                user_email: auditUserEmail,
-                user_name: auditUserName,
-                action: "IMPORT_EVENTS_CSV",
-                entity_type: "database",
-                entity_id: "events_csv_import",
-                changes: {
-                  imported: result.imported.events,
-                  skipped: result.skipped.events,
-                  imported_at: new Date().toISOString(),
-                  file: file.name,
-                },
-              });
-
-              message =
-                `Imported events: ${result.imported.events}` +
-                ` (skipped: ${result.skipped.events})`;
-            } else {
-              const auditLogs = mapCsvRowsToAuditLogs(rows);
-              const result = await db.importData({ auditLogs });
-
-              await db.createAuditLog({
-                user_email: auditUserEmail,
-                user_name: auditUserName,
-                action: "IMPORT_AUDIT_LOGS_CSV",
-                entity_type: "database",
-                entity_id: "audit_logs_csv_import",
-                changes: {
-                  imported: result.imported.auditLogs,
-                  skipped: result.skipped.auditLogs,
-                  imported_at: new Date().toISOString(),
-                  file: file.name,
-                },
-              });
-
-              message =
-                `Imported audit logs: ${result.imported.auditLogs}` +
-                ` (skipped: ${result.skipped.auditLogs})`;
-            }
-
-            await loadStats();
-            alert(`CSV import completed:\n\n${message}`);
-            return;
-          }
-
-          const text = await file.text();
-          const data = JSON.parse(text);
-
-          if (!data.interviewers && !data.events && !data.auditLogs) {
-            alert(
-              "Invalid backup file format. File must contain at least one of: interviewers, events, or auditLogs."
-            );
-            return;
-          }
-
-          const result = await db.importData(data);
+        if (dataset === "interviewers") {
+          const interviewers = mapCsvRowsToInterviewers(rows);
+          const result = await db.importData({ interviewers });
 
           await db.createAuditLog({
             user_email: auditUserEmail,
             user_name: auditUserName,
-            action: "IMPORT_DATA",
+            action: "IMPORT_INTERVIEWERS_CSV",
             entity_type: "database",
-            entity_id: "full_import",
+            entity_id: "interviewers_csv_import",
             changes: {
-              imported: result.imported,
-              skipped: result.skipped,
+              imported: result.imported.interviewers,
+              skipped: result.skipped.interviewers,
               imported_at: new Date().toISOString(),
               file: file.name,
-              format: "json",
             },
           });
 
-          await loadStats();
+          message =
+            `Imported interviewers: ${result.imported.interviewers}` +
+            ` (skipped: ${result.skipped.interviewers})`;
+        } else if (dataset === "events") {
+          const events = mapCsvRowsToEvents(rows);
+          const result = await db.importData({ events });
 
-          alert(
-            `Import completed!\n\n` +
-              `Imported:\n` +
-              `- Interviewers: ${result.imported.interviewers}\n` +
-              `- Events: ${result.imported.events}\n` +
-              `- Audit Logs: ${result.imported.auditLogs}\n\n` +
-              `Skipped (duplicates):\n` +
-              `- Interviewers: ${result.skipped.interviewers}\n` +
-              `- Events: ${result.skipped.events}\n` +
-              `- Audit Logs: ${result.skipped.auditLogs}`
-          );
-        } catch (error) {
-          console.error("Failed to import data:", error);
-          alert("Failed to import data. Please check the file format.");
+          await db.createAuditLog({
+            user_email: auditUserEmail,
+            user_name: auditUserName,
+            action: "IMPORT_EVENTS_CSV",
+            entity_type: "database",
+            entity_id: "events_csv_import",
+            changes: {
+              imported: result.imported.events,
+              skipped: result.skipped.events,
+              imported_at: new Date().toISOString(),
+              file: file.name,
+            },
+          });
+
+          message =
+            `Imported events: ${result.imported.events}` +
+            ` (skipped: ${result.skipped.events})`;
+        } else {
+          const auditLogs = mapCsvRowsToAuditLogs(rows);
+          const result = await db.importData({ auditLogs });
+
+          await db.createAuditLog({
+            user_email: auditUserEmail,
+            user_name: auditUserName,
+            action: "IMPORT_AUDIT_LOGS_CSV",
+            entity_type: "database",
+            entity_id: "audit_logs_csv_import",
+            changes: {
+              imported: result.imported.auditLogs,
+              skipped: result.skipped.auditLogs,
+              imported_at: new Date().toISOString(),
+              file: file.name,
+            },
+          });
+
+          message =
+            `Imported audit logs: ${result.imported.auditLogs}` +
+            ` (skipped: ${result.skipped.auditLogs})`;
         }
-      };
-      input.click();
+
+        await loadStats();
+        setShowImportGuide(false);
+        alert(`CSV import completed:\n\n${message}`);
+        return;
+      }
+
+      const text = await file.text();
+      const data = JSON.parse(text);
+
+      if (!data.interviewers && !data.events && !data.auditLogs) {
+        alert(
+          "Invalid backup file format. File must contain at least one of: interviewers, events, or auditLogs."
+        );
+        return;
+      }
+
+      const result = await db.importData(data);
+
+      await db.createAuditLog({
+        user_email: auditUserEmail,
+        user_name: auditUserName,
+        action: "IMPORT_DATA",
+        entity_type: "database",
+        entity_id: "full_import",
+        changes: {
+          imported: result.imported,
+          skipped: result.skipped,
+          imported_at: new Date().toISOString(),
+          file: file.name,
+          format: "json",
+        },
+      });
+
+      await loadStats();
+      setShowImportGuide(false);
+
+      alert(
+        `Import completed!\n\n` +
+          `Imported:\n` +
+          `- Interviewers: ${result.imported.interviewers}\n` +
+          `- Events: ${result.imported.events}\n` +
+          `- Audit Logs: ${result.imported.auditLogs}\n\n` +
+          `Skipped (duplicates):\n` +
+          `- Interviewers: ${result.skipped.interviewers}\n` +
+          `- Events: ${result.skipped.events}\n` +
+          `- Audit Logs: ${result.skipped.auditLogs}`
+      );
     } catch (error) {
       console.error("Failed to import data:", error);
+      alert("Failed to import data. Please check the file format.");
     }
   };
 
@@ -356,6 +438,13 @@ export function DatabaseManagementPage() {
       </div>
 
       {/* Action Buttons */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".json,.csv"
+        className="hidden"
+        onChange={handleFileSelected}
+      />
       <div className="flex flex-wrap gap-3">
         <Button onClick={loadStats} disabled={loading} variant="outline">
           <RefreshCwIcon
@@ -367,7 +456,7 @@ export function DatabaseManagementPage() {
           <DownloadIcon className="w-4 h-4 mr-2" />
           Export Backup
         </Button>
-        <Button onClick={handleImport} variant="outline">
+        <Button onClick={() => setShowImportGuide(true)} variant="outline">
           <UploadIcon className="w-4 h-4 mr-2" />
           Import Data
         </Button>
@@ -596,6 +685,72 @@ export function DatabaseManagementPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <Dialog open={showImportGuide} onOpenChange={setShowImportGuide}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>Import CSV Guide</DialogTitle>
+            <DialogDescription>
+              Review the required headers before importing CSV backups. You can
+              also select a JSON backup exported from this page.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-1">
+            {csvGuides.map((guide) => (
+              <Card key={guide.key}>
+                <CardHeader>
+                  <CardTitle className="text-lg">{guide.title}</CardTitle>
+                  <CardDescription>{guide.description}</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div>
+                    <p className="text-sm font-medium">Columns</p>
+                    <ul className="mt-2 space-y-1 list-disc list-inside text-sm text-muted-foreground">
+                      {guide.columns.map((column) => (
+                        <li key={column}>{column}</li>
+                      ))}
+                    </ul>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium">Sample row</p>
+                    <code className="mt-2 block rounded bg-muted p-2 text-xs text-muted-foreground break-all">
+                      {guide.sample}
+                    </code>
+                  </div>
+                  <div>
+                    <Button variant="outline" size="sm" asChild>
+                      <a href={guide.samplePath} download>
+                        <DownloadIcon className="h-4 w-4" />
+                        Download sample
+                      </a>
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+
+          <DialogFooter className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-xs text-muted-foreground">
+              Tip: CSV imports merge by email or id. JSON backups restore the
+              full dataset exactly as exported.
+            </p>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setShowImportGuide(false)}
+              >
+                Cancel
+              </Button>
+              <Button onClick={openFilePicker}>
+                <UploadIcon className="w-4 h-4 mr-2" />
+                Select File
+              </Button>
+            </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
