@@ -64,6 +64,7 @@ interface DatabaseStorage {
   interviewers: Interviewer[];
   events: InterviewEvent[];
   auditLogs: AuditLog[];
+  meta?: DatabaseMeta;
 }
 
 export interface AuditContext {
@@ -71,9 +72,18 @@ export interface AuditContext {
   userName: string;
 }
 
+type DatabaseSeedState = "seeded" | "cleared" | "custom";
+
+interface DatabaseMeta {
+  seedState: DatabaseSeedState;
+  lastSeededAt?: string;
+  lastUpdatedAt: string;
+}
+
 class DatabaseService {
   private storageKey = "interview_roster_db";
   private initialized = false;
+  private initializationPromise: Promise<void> | null = null;
 
   private defaultAuditContext: AuditContext = {
     userEmail: "system@interviewer-roster.local",
@@ -85,6 +95,60 @@ class DatabaseService {
       return context;
     }
     return this.defaultAuditContext;
+  }
+
+  private async ensureInitialized(): Promise<void> {
+    if (this.initialized) return;
+    await this.initialize();
+  }
+
+  private withUpdatedMeta(
+    db: DatabaseStorage,
+    override?: Partial<DatabaseMeta>
+  ): DatabaseStorage {
+    const now = getCurrentTimestamp();
+
+    const interviewers = Array.isArray(db.interviewers)
+      ? db.interviewers
+      : [];
+    const events = Array.isArray(db.events) ? db.events : [];
+    const auditLogs = Array.isArray(db.auditLogs) ? db.auditLogs : [];
+
+    const hasData =
+      interviewers.length > 0 || events.length > 0 || auditLogs.length > 0;
+
+    const previous: DatabaseMeta = db.meta ?? {
+      seedState: hasData ? "custom" : "cleared",
+      lastUpdatedAt: now,
+    };
+
+    let seedState =
+      override?.seedState ?? previous.seedState ?? (hasData ? "custom" : "cleared");
+
+    if (seedState === "cleared" && hasData) {
+      seedState = "custom";
+    }
+
+    let lastSeededAt = previous.lastSeededAt;
+    if (override?.lastSeededAt) {
+      lastSeededAt = override.lastSeededAt;
+    } else if (seedState === "seeded" && !lastSeededAt) {
+      lastSeededAt = now;
+    }
+
+    const meta: DatabaseMeta = {
+      seedState,
+      lastUpdatedAt: override?.lastUpdatedAt ?? now,
+      ...(lastSeededAt ? { lastSeededAt } : {}),
+    };
+
+    return {
+      ...db,
+      interviewers,
+      events,
+      auditLogs,
+      meta,
+    };
   }
 
   private buildChangeSet<T extends Record<string, unknown>>(
@@ -112,21 +176,60 @@ class DatabaseService {
   async initialize(): Promise<void> {
     if (this.initialized) return;
 
-    try {
-      // Check if database exists in localStorage
-      const existing = localStorage.getItem(this.storageKey);
-
-      if (!existing) {
-        await this.seedInitialData();
-      } else {
-        console.log("✅ Database loaded from localStorage");
-      }
-
-      this.initialized = true;
-    } catch (error) {
-      console.error("❌ Database initialization failed:", error);
-      throw error;
+    if (this.initializationPromise) {
+      await this.initializationPromise;
+      return;
     }
+
+    this.initializationPromise = (async () => {
+      try {
+        const existingRaw = localStorage.getItem(this.storageKey);
+
+        if (!existingRaw) {
+          await this.seedInitialData();
+        } else {
+          let parsed: DatabaseStorage | null = null;
+
+          try {
+            parsed = JSON.parse(existingRaw) as DatabaseStorage;
+          } catch (parseError) {
+            console.warn("⚠️ Invalid database payload detected, seeding fresh data.", parseError);
+          }
+
+          if (!parsed) {
+            await this.seedInitialData();
+          } else {
+            const hasCollections =
+              Array.isArray(parsed.interviewers) &&
+              Array.isArray(parsed.events) &&
+              Array.isArray(parsed.auditLogs);
+
+            const hasData =
+              (parsed.interviewers?.length ?? 0) > 0 ||
+              (parsed.events?.length ?? 0) > 0 ||
+              (parsed.auditLogs?.length ?? 0) > 0;
+
+            const wasCleared = parsed.meta?.seedState === "cleared";
+
+            if (!hasCollections || (!hasData && !wasCleared)) {
+              await this.seedInitialData();
+            } else {
+              this.saveDatabase(parsed);
+              console.log("✅ Database loaded from localStorage");
+            }
+          }
+        }
+
+        this.initialized = true;
+      } catch (error) {
+        console.error("❌ Database initialization failed:", error);
+        throw error;
+      } finally {
+        this.initializationPromise = null;
+      }
+    })();
+
+    await this.initializationPromise;
   }
 
   /**
@@ -135,16 +238,35 @@ class DatabaseService {
   private getDatabase(): DatabaseStorage {
     const data = localStorage.getItem(this.storageKey);
     if (!data) {
-      return { interviewers: [], events: [], auditLogs: [] };
+      return this.withUpdatedMeta({
+        interviewers: [],
+        events: [],
+        auditLogs: [],
+      });
     }
-    return JSON.parse(data);
+
+    try {
+      const parsed = JSON.parse(data) as DatabaseStorage;
+      return this.withUpdatedMeta(parsed);
+    } catch (error) {
+      console.warn("⚠️ Failed to parse stored database, returning empty snapshot.", error);
+      return this.withUpdatedMeta({
+        interviewers: [],
+        events: [],
+        auditLogs: [],
+      });
+    }
   }
 
   /**
    * Save database to localStorage
    */
-  private saveDatabase(db: DatabaseStorage): void {
-    localStorage.setItem(this.storageKey, JSON.stringify(db));
+  private saveDatabase(
+    db: DatabaseStorage,
+    metaOverride?: Partial<DatabaseMeta>
+  ): void {
+    const normalized = this.withUpdatedMeta(db, metaOverride);
+    localStorage.setItem(this.storageKey, JSON.stringify(normalized));
   }
 
   /**
@@ -173,7 +295,12 @@ class DatabaseService {
       auditLogs: [],
     };
 
-    this.saveDatabase(db);
+    const seededAt = getCurrentTimestamp();
+    this.saveDatabase(db, {
+      seedState: "seeded",
+      lastSeededAt: seededAt,
+      lastUpdatedAt: seededAt,
+    });
     console.log("✅ Initial data seeded with", {
       interviewers: db.interviewers.length,
       events: db.events.length,
@@ -186,6 +313,7 @@ class DatabaseService {
    * Get all interviewers
    */
   async getInterviewers(): Promise<Interviewer[]> {
+    await this.ensureInitialized();
     const db = this.getDatabase();
     return db.interviewers.sort((a, b) => a.name.localeCompare(b.name));
   }
@@ -194,6 +322,7 @@ class DatabaseService {
    * Get interviewer by email
    */
   async getInterviewerByEmail(email: string): Promise<Interviewer | null> {
+    await this.ensureInitialized();
     const db = this.getDatabase();
     return db.interviewers.find((i) => i.email === email) || null;
   }
@@ -205,6 +334,7 @@ class DatabaseService {
     data: Partial<Interviewer>,
     context?: AuditContext
   ): Promise<Interviewer> {
+    await this.ensureInitialized();
     const db = this.getDatabase();
     const now = getCurrentTimestamp();
 
@@ -244,6 +374,7 @@ class DatabaseService {
     data: Partial<Interviewer>,
     context?: AuditContext
   ): Promise<Interviewer> {
+    await this.ensureInitialized();
     const db = this.getDatabase();
     const index = db.interviewers.findIndex((i) => i.email === email);
 
@@ -281,6 +412,7 @@ class DatabaseService {
    * Delete an interviewer
    */
   async deleteInterviewer(email: string, context?: AuditContext): Promise<void> {
+    await this.ensureInitialized();
     const db = this.getDatabase();
     const existing = db.interviewers.find((i) => i.email === email);
     db.interviewers = db.interviewers.filter((i) => i.email !== email);
@@ -307,6 +439,7 @@ class DatabaseService {
    * Get all interview events
    */
   async getInterviewEvents(): Promise<InterviewEvent[]> {
+    await this.ensureInitialized();
     const db = this.getDatabase();
     return db.events.sort(
       (a, b) =>
@@ -321,6 +454,7 @@ class DatabaseService {
   async getInterviewEventsByInterviewer(
     email: string
   ): Promise<InterviewEvent[]> {
+    await this.ensureInitialized();
     const db = this.getDatabase();
     return db.events
       .filter((e) => e.interviewer_email === email)
@@ -338,6 +472,7 @@ class DatabaseService {
     data: Partial<InterviewEvent>,
     context?: AuditContext
   ): Promise<InterviewEvent> {
+    await this.ensureInitialized();
     const db = this.getDatabase();
     const now = getCurrentTimestamp();
 
@@ -382,6 +517,7 @@ class DatabaseService {
     data: Partial<InterviewEvent>,
     context?: AuditContext
   ): Promise<InterviewEvent> {
+    await this.ensureInitialized();
     const db = this.getDatabase();
     const index = db.events.findIndex((e) => e.id === id);
 
@@ -419,6 +555,7 @@ class DatabaseService {
    * Delete an interview event
   */
   async deleteInterviewEvent(id: string, context?: AuditContext): Promise<void> {
+    await this.ensureInitialized();
     const db = this.getDatabase();
     const existing = db.events.find((e) => e.id === id);
     db.events = db.events.filter((e) => e.id !== id);
@@ -445,6 +582,7 @@ class DatabaseService {
   async createAuditLog(
     data: Omit<AuditLog, "id" | "timestamp">
   ): Promise<void> {
+    await this.ensureInitialized();
     const db = this.getDatabase();
 
     const log: AuditLog = {
@@ -461,6 +599,7 @@ class DatabaseService {
    * Get all audit logs
    */
   async getAuditLogs(): Promise<AuditLog[]> {
+    await this.ensureInitialized();
     const db = this.getDatabase();
     return db.auditLogs
       .sort(
@@ -476,9 +615,11 @@ class DatabaseService {
    * Reset database to mock data
    */
   async resetDatabase(): Promise<void> {
+    await this.ensureInitialized();
     // Clear the database
     localStorage.removeItem(this.storageKey);
     this.initialized = false;
+    this.initializationPromise = null;
 
     // Reinitialize with fresh mock data
     await this.seedInitialData();
@@ -491,6 +632,7 @@ class DatabaseService {
    * Clear database completely (empty state)
    */
   async clearDatabase(): Promise<void> {
+    await this.ensureInitialized();
     // Create empty database
     const emptyDb: DatabaseStorage = {
       interviewers: [],
@@ -498,7 +640,7 @@ class DatabaseService {
       auditLogs: [],
     };
 
-    this.saveDatabase(emptyDb);
+    this.saveDatabase(emptyDb, { seedState: "cleared" });
     console.log("✅ Database cleared successfully - all data removed");
   }
 
@@ -510,6 +652,7 @@ class DatabaseService {
     events: InterviewEvent[];
     auditLogs: AuditLog[];
   }> {
+    await this.ensureInitialized();
     return {
       interviewers: await this.getInterviewers(),
       events: await this.getInterviewEvents(),
@@ -529,6 +672,7 @@ class DatabaseService {
     imported: { interviewers: number; events: number; auditLogs: number };
     skipped: { interviewers: number; events: number; auditLogs: number };
   }> {
+    await this.ensureInitialized();
     const db = this.getDatabase();
     const result = {
       imported: { interviewers: 0, events: 0, auditLogs: 0 },
@@ -582,7 +726,7 @@ class DatabaseService {
       }
     }
 
-    this.saveDatabase(db);
+    this.saveDatabase(db, { seedState: "custom" });
     return result;
   }
 
@@ -591,6 +735,7 @@ class DatabaseService {
    * This will clear existing data and load fresh mock data
    */
   async importMockData(): Promise<void> {
+    await this.ensureInitialized();
     try {
       console.log("Starting mock data import...");
 
@@ -623,7 +768,12 @@ class DatabaseService {
       };
 
       // Save to localStorage
-      this.saveDatabase(db);
+      const seededAt = getCurrentTimestamp();
+      this.saveDatabase(db, {
+        seedState: "seeded",
+        lastSeededAt: seededAt,
+        lastUpdatedAt: seededAt,
+      });
 
       console.log("✅ Mock data imported successfully:", {
         interviewers: db.interviewers.length,

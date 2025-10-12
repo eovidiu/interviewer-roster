@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, type ChangeEvent } from "react";
 import { db } from "@/polymet/data/database-service";
 import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   Card,
   CardContent,
@@ -55,6 +56,8 @@ export function DatabaseManagementPage() {
   const [loading, setLoading] = useState(true);
   const [showResetDialog, setShowResetDialog] = useState(false);
   const [showImportGuide, setShowImportGuide] = useState(false);
+  const [showMockImportDialog, setShowMockImportDialog] = useState(false);
+  const [mockImporting, setMockImporting] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const { user } = useAuth();
@@ -351,29 +354,10 @@ export function DatabaseManagementPage() {
   };
 
   const handleImportMockData = async () => {
+    setMockImporting(true);
     try {
-      console.log("Import Mock Data button clicked");
-
-      // Show confirmation dialog
-      const confirmed = window.confirm(
-        "This will clear all existing data and import fresh mock data. Are you sure you want to continue?"
-      );
-
-      console.log("User confirmation:", confirmed);
-
-      if (!confirmed) {
-        console.log("User cancelled import");
-        return;
-      }
-
-      console.log("Starting import process...");
-
-      // Import mock data (this clears everything first)
       await db.importMockData();
 
-      console.log("Mock data imported, creating audit log...");
-
-      // Log audit AFTER import (so it doesn't get wiped)
       await db.createAuditLog({
         user_email: auditUserEmail,
         user_name: auditUserName,
@@ -385,14 +369,9 @@ export function DatabaseManagementPage() {
         },
       });
 
-      console.log("Audit log created, refreshing stats...");
-
-      // Refresh stats to show the new data
       await loadStats();
+      setShowMockImportDialog(false);
 
-      console.log("Stats refreshed, showing success message");
-
-      // Show success message after UI updates
       setTimeout(() => {
         alert(
           "Mock data imported successfully! Database has been reinitialized with fresh mock data."
@@ -400,7 +379,13 @@ export function DatabaseManagementPage() {
       }, 100);
     } catch (error) {
       console.error("Failed to import mock data:", error);
-      alert(`Failed to import mock data: ${error}`);
+      alert(
+        `Failed to import mock data: ${
+          error instanceof Error ? error.message : error
+        }`
+      );
+    } finally {
+      setMockImporting(false);
     }
   };
 
@@ -460,15 +445,48 @@ export function DatabaseManagementPage() {
           <UploadIcon className="w-4 h-4 mr-2" />
           Import Data
         </Button>
-        <Button onClick={handleImportMockData} variant="outline">
-          <DatabaseIcon className="w-4 h-4 mr-2" />
-          Import Mock Data
+        <Button
+          onClick={() => setShowMockImportDialog(true)}
+          variant="outline"
+          disabled={mockImporting || loading}
+        >
+          {mockImporting ? (
+            <RefreshCwIcon className="w-4 h-4 mr-2 animate-spin" />
+          ) : (
+            <DatabaseIcon className="w-4 h-4 mr-2" />
+          )}
+          {mockImporting ? "Importing..." : "Import Mock Data"}
         </Button>
         <Button onClick={() => setShowResetDialog(true)} variant="destructive">
           <TrashIcon className="w-4 h-4 mr-2" />
           Clear Database
         </Button>
       </div>
+
+      {!loading && stats.interviewers === 0 && stats.events === 0 && (
+        <Alert className="border-dashed">
+          <DatabaseIcon className="h-5 w-5" />
+          <AlertTitle>Mock dataset not loaded</AlertTitle>
+          <AlertDescription className="space-y-3">
+            <p>
+              The roster is empty. Re-import the bundled mock data to restore
+              interviewers and events for demos or smoke testing.
+            </p>
+            <Button
+              size="sm"
+              onClick={() => setShowMockImportDialog(true)}
+              disabled={mockImporting}
+            >
+              {mockImporting ? (
+                <RefreshCwIcon className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <DatabaseIcon className="mr-2 h-4 w-4" />
+              )}
+              {mockImporting ? "Importing..." : "Import Mock Data"}
+            </Button>
+          </AlertDescription>
+        </Alert>
+      )}
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -656,6 +674,40 @@ export function DatabaseManagementPage() {
           </div>
         </CardContent>
       </Card>
+
+      <AlertDialog
+        open={showMockImportDialog}
+        onOpenChange={(open) => {
+          if (!mockImporting) {
+            setShowMockImportDialog(open);
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <DatabaseIcon className="w-5 h-5 text-blue-500" />
+              Import Mock Dataset
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              This will replace existing interviewers, events, and audit logs
+              with the bundled mock dataset. Export a backup first if you need
+              to preserve current data.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={mockImporting}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => void handleImportMockData()}
+              disabled={mockImporting}
+            >
+              {mockImporting ? "Importing..." : "Import Mock Data"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Reset Confirmation Dialog */}
       <AlertDialog open={showResetDialog} onOpenChange={setShowResetDialog}>
