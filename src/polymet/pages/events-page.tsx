@@ -17,6 +17,7 @@ import {
   exportEventsCsv,
   exportInterviewersCsv,
 } from "@/lib/csv-utils";
+import type { ExportTypeOption } from "@/polymet/components/export-dialog";
 import type { InterviewEvent } from "@/polymet/data/mock-interview-events-data";
 import { useAuth } from "@/polymet/data/auth-context";
 
@@ -90,21 +91,33 @@ export function EventsPage() {
     }
   };
 
-  const handleExport = async (type: string) => {
+  const handleExport = async (type: ExportTypeOption) => {
     try {
       if (type === "events") {
+        if (events.length === 0) {
+          alert("No interview events available to export.");
+          return;
+        }
         exportEventsCsv(events);
         return;
       }
 
       if (type === "interviewers") {
         const roster = await db.getInterviewers();
+        if (roster.length === 0) {
+          alert("No interviewers available to export.");
+          return;
+        }
         exportInterviewersCsv(roster);
         return;
       }
 
       if (type === "audit_logs") {
         const logs = await db.getAuditLogs();
+        if (logs.length === 0) {
+          alert("No audit logs available to export.");
+          return;
+        }
         exportAuditLogsCsv(logs);
         return;
       }

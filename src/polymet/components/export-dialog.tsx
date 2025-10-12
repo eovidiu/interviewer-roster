@@ -24,7 +24,7 @@ interface ExportDialogProps {
   onExport: (type: ExportTypeOption) => void;
 }
 
-type ExportTypeOption = "interviewers" | "events" | "audit_logs";
+export type ExportTypeOption = "interviewers" | "events" | "audit_logs";
 
 export function ExportDialog({
   open,
