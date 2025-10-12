@@ -146,7 +146,6 @@ export function InterviewerScheduleCard({
             {displayEvents.map((event) => {
               const { date, time } = formatDateTime(event.start_time);
               const duration = formatDuration(event.start_time, event.end_time);
-              const isUpcoming = new Date(event.start_time) > now;
 
               return (
                 <div

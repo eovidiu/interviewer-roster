@@ -30,7 +30,7 @@ export function MarkInterviewsPage() {
     }
   };
 
-  const handleSave = async (data: Record<string, Record<string, number>>) => {
+  const handleSave = async () => {
     try {
       // Auto-save is handled by the calendar component
       console.log("Interview data saved successfully");

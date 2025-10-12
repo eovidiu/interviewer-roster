@@ -25,16 +25,27 @@ interface ExportDialogProps {
   onExport: (type: string, anonymize: boolean) => void;
 }
 
+type ExportTypeOption = "interviewers" | "events" | "audit_logs";
+
 export function ExportDialog({
   open,
   onOpenChange,
   userRole,
   onExport,
 }: ExportDialogProps) {
-  const [exportType, setExportType] = useState<
-    "interviewers" | "events" | "audit_logs"
-  >("interviewers");
+  const [exportType, setExportType] =
+    useState<ExportTypeOption>("interviewers");
   const [anonymize, setAnonymize] = useState(false);
+
+  const handleExportTypeChange = (value: string) => {
+    if (
+      value === "interviewers" ||
+      value === "events" ||
+      value === "audit_logs"
+    ) {
+      setExportType(value);
+    }
+  };
 
   const handleExport = () => {
     onExport(exportType, anonymize);
@@ -58,7 +69,7 @@ export function ExportDialog({
             <Label>Select Data to Export</Label>
             <RadioGroup
               value={exportType}
-              onValueChange={(value) => setExportType(value as any)}
+              onValueChange={handleExportTypeChange}
             >
               <div className="flex items-center space-x-2 p-3 border border-border rounded-lg hover:bg-muted/50 cursor-pointer">
                 <RadioGroupItem value="interviewers" id="interviewers" />
@@ -134,7 +145,7 @@ export function ExportDialog({
               <Checkbox
                 id="anonymize"
                 checked={anonymize}
-                onCheckedChange={(checked) => setAnonymize(checked as boolean)}
+                onCheckedChange={(checked) => setAnonymize(checked === true)}
               />
 
               <Label htmlFor="anonymize" className="cursor-pointer flex-1">

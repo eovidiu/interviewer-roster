@@ -12,7 +12,6 @@ import {
   LayoutGridIcon,
   CalendarDaysIcon,
 } from "lucide-react";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Select,
   SelectContent,
@@ -21,11 +20,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-interface SchedulePageProps {
-  userRole?: "viewer" | "talent" | "admin";
-}
-
-export function SchedulePage({ userRole = "admin" }: SchedulePageProps) {
+export function SchedulePage() {
   const [interviewers, setInterviewers] = useState<Interviewer[]>([]);
   const [events, setEvents] = useState<InterviewEvent[]>([]);
   const [loading, setLoading] = useState(true);

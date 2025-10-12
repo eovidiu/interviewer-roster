@@ -57,21 +57,24 @@ export function EditableWeeklyCalendar({
   });
 
   // Get events for a specific interviewer and date
-  const getEventsForDay = (interviewerEmail: string, date: Date) => {
-    const dayStart = new Date(date);
-    dayStart.setHours(0, 0, 0, 0);
-    const dayEnd = new Date(date);
-    dayEnd.setHours(23, 59, 59, 999);
+  const getEventsForDay = useCallback(
+    (interviewerEmail: string, date: Date) => {
+      const dayStart = new Date(date);
+      dayStart.setHours(0, 0, 0, 0);
+      const dayEnd = new Date(date);
+      dayEnd.setHours(23, 59, 59, 999);
 
-    return events.filter((event) => {
-      const eventDate = new Date(event.start_time);
-      return (
-        event.interviewer_email === interviewerEmail &&
-        eventDate >= dayStart &&
-        eventDate <= dayEnd
-      );
-    });
-  };
+      return events.filter((event) => {
+        const eventDate = new Date(event.start_time);
+        return (
+          event.interviewer_email === interviewerEmail &&
+          eventDate >= dayStart &&
+          eventDate <= dayEnd
+        );
+      });
+    },
+    [events]
+  );
 
   // Format date for display
   const formatDate = (date: Date) => {
@@ -105,7 +108,7 @@ export function EditableWeeklyCalendar({
 
     setInterviewCounts(counts);
     setHasChanges(false);
-  }, [currentWeekStart, interviewers, events]);
+  }, [currentWeekStart, interviewers, getEventsForDay]);
 
   // Navigate weeks
   const goToPreviousWeek = () => {

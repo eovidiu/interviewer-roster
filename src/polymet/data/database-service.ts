@@ -56,7 +56,7 @@ export interface AuditLog {
   action: string;
   entity_type: string;
   entity_id: string;
-  changes: Record<string, any>;
+  changes: Record<string, unknown>;
   timestamp: string;
 }
 

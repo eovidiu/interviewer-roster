@@ -35,6 +35,11 @@ export function MarkAttendanceDialog({
     "attended"
   );
   const [notes, setNotes] = useState("");
+  const handleStatusChange = (value: string) => {
+    if (value === "attended" || value === "ghosted" || value === "cancelled") {
+      setStatus(value);
+    }
+  };
 
   const handleSubmit = () => {
     if (!event) return;
@@ -94,10 +99,7 @@ export function MarkAttendanceDialog({
 
           <div className="space-y-3">
             <Label>Attendance Status</Label>
-            <RadioGroup
-              value={status}
-              onValueChange={(value) => setStatus(value as any)}
-            >
+            <RadioGroup value={status} onValueChange={handleStatusChange}>
               <div className="flex items-center space-x-2 p-3 border border-border rounded-lg hover:bg-muted/50 cursor-pointer">
                 <RadioGroupItem value="attended" id="attended" />
 

@@ -47,6 +47,11 @@ export function AddInterviewerDialog({
     skills: [] as string[],
   });
   const [skillInput, setSkillInput] = useState("");
+  const handleRoleChange = (value: string) => {
+    if (value === "viewer" || value === "talent" || value === "admin") {
+      setFormData({ ...formData, role: value });
+    }
+  };
 
   useEffect(() => {
     if (interviewer) {
@@ -144,9 +149,7 @@ export function AddInterviewerDialog({
               <Label htmlFor="role">Role *</Label>
               <Select
                 value={formData.role}
-                onValueChange={(value: any) =>
-                  setFormData({ ...formData, role: value })
-                }
+                onValueChange={handleRoleChange}
                 disabled={!canEditRole}
               >
                 <SelectTrigger id="role">

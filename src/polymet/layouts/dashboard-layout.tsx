@@ -9,7 +9,6 @@ import {
   CalendarIcon,
   CalendarDaysIcon,
   CalendarCheckIcon,
-  FileTextIcon,
   SettingsIcon,
   DatabaseIcon,
   MenuIcon,
@@ -40,7 +39,6 @@ export function DashboardLayout({
 
   // Use auth context user data, fallback to props if provided
   const displayName = userName || user?.name || "Guest User";
-  const displayEmail = userEmail || user?.email || "guest@company.com";
   const displayRole = userRole || user?.role || "viewer";
   const displayPicture = user?.picture || "https://github.com/yusufhilmi.png";
 
@@ -123,6 +121,9 @@ export function DashboardLayout({
               <div className="flex-1 min-w-0">
                 <div className="text-sm font-medium truncate">
                   {displayName}
+                </div>
+                <div className="text-xs text-muted-foreground truncate">
+                  {userEmail || user?.email || "guest@company.com"}
                 </div>
                 <div className="mt-1">
                   <RoleBadge role={displayRole} />

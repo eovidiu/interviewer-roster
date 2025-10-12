@@ -9,13 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import {
-  SettingsIcon,
-  DatabaseIcon,
-  BellIcon,
-  ShieldCheckIcon,
-  CalendarIcon,
-} from "lucide-react";
+import { DatabaseIcon, BellIcon, ShieldCheckIcon, CalendarIcon } from "lucide-react";
 
 export function SettingsPage() {
   return (

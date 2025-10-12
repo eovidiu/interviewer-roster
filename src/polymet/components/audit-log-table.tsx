@@ -85,7 +85,18 @@ export function AuditLogTable({ logs }: AuditLogTableProps) {
     };
   };
 
-  const formatChanges = (changes: Record<string, any> | null) => {
+  const isDiffChange = (
+    value: unknown
+  ): value is { from: unknown; to: unknown } => {
+    return (
+      typeof value === "object" &&
+      value !== null &&
+      "from" in value &&
+      "to" in value
+    );
+  };
+
+  const formatChanges = (changes: Record<string, unknown> | null) => {
     if (!changes) return "-";
 
     const entries = Object.entries(changes);
@@ -93,12 +104,7 @@ export function AuditLogTable({ logs }: AuditLogTableProps) {
 
     return entries
       .map(([key, value]) => {
-        if (
-          typeof value === "object" &&
-          value !== null &&
-          "from" in value &&
-          "to" in value
-        ) {
+        if (isDiffChange(value)) {
           return `${key}: ${JSON.stringify(value.from)} → ${JSON.stringify(value.to)}`;
         }
         return `${key}: ${JSON.stringify(value)}`;
