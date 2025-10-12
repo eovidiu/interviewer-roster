@@ -81,15 +81,7 @@ class DatabaseService {
       const existing = localStorage.getItem(this.storageKey);
 
       if (!existing) {
-        // Create empty database (don't auto-seed)
-        // User can manually import mock data if needed
-        const emptyDb: DatabaseStorage = {
-          interviewers: [],
-          events: [],
-          auditLogs: [],
-        };
-        this.saveDatabase(emptyDb);
-        console.log("✅ Database initialized with empty state");
+        await this.seedInitialData();
       } else {
         console.log("✅ Database loaded from localStorage");
       }

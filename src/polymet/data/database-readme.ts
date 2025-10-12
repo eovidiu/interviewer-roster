@@ -30,8 +30,8 @@
  * - Changes are immediately persisted to localStorage
  *
  * ### Initial Data:
- * - On first load, the database is seeded with mock data
- * - This provides a working demo without requiring external data
+ * - On first load, the database is seeded with mock data automatically
+ * - Re-seed at any time from the **Database → Import Mock Data** action in the app
  *
  * ## USING THE DATABASE SERVICE
  *
