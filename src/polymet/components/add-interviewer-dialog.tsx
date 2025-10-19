@@ -222,6 +222,7 @@ export function AddInterviewerDialog({
                     <button
                       type="button"
                       onClick={() => handleRemoveSkill(skill)}
+                      aria-label={`Remove ${skill}`}
                       className="ml-1 hover:bg-secondary-foreground/20 rounded-full"
                     >
                       <XIcon className="h-3 w-3" />

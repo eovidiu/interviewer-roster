@@ -121,7 +121,7 @@ export function DashboardLayout({
             <div className="flex items-center gap-3 mb-3">
               <img
                 src={displayPicture}
-                alt={displayName}
+                alt={`${displayName}'s profile picture`}
                 className="w-10 h-10 rounded-full"
               />
 
@@ -141,6 +141,7 @@ export function DashboardLayout({
                 size="sm"
                 className="lg:hidden"
                 onClick={() => setSidebarOpen(false)}
+                aria-label="Close navigation menu"
               >
                 <XIcon className="h-5 w-5" />
               </Button>
@@ -218,6 +219,7 @@ export function DashboardLayout({
               size="sm"
               className="lg:hidden"
               onClick={() => setSidebarOpen(true)}
+              aria-label="Open navigation menu"
             >
               <MenuIcon className="h-5 w-5" />
             </Button>
