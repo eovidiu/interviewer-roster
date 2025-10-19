@@ -134,7 +134,7 @@ export function InterviewersPage() {
           setErrorAlertOpen(true);
           return;
         }
-        exportInterviewersCsv(interviewers);
+        await exportInterviewersCsv(interviewers);
         return;
       }
 
@@ -145,7 +145,7 @@ export function InterviewersPage() {
           setErrorAlertOpen(true);
           return;
         }
-        exportEventsCsv(allEvents);
+        await exportEventsCsv(allEvents);
         return;
       }
 
@@ -156,7 +156,7 @@ export function InterviewersPage() {
           setErrorAlertOpen(true);
           return;
         }
-        exportAuditLogsCsv(logs);
+        await exportAuditLogsCsv(logs);
         return;
       }
 

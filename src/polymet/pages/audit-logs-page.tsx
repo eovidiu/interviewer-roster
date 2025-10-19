@@ -37,14 +37,14 @@ export function AuditLogsPage() {
   const updateActions = logs.filter((l) => l.action.includes("UPDATE")).length;
   const deleteActions = logs.filter((l) => l.action.includes("DELETE")).length;
 
-  const handleExport = () => {
+  const handleExport = async () => {
     if (logs.length === 0) {
       alert("No audit logs available to export.");
       return;
     }
 
     try {
-      exportAuditLogsCsv(logs);
+      await exportAuditLogsCsv(logs);
     } catch (error) {
       console.error("Failed to export audit logs:", error);
       alert("Failed to export audit logs. Please try again.");
