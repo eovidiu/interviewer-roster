@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { KpiMetricCard } from "@/polymet/components/kpi-metric-card";
 import { StatusBadge } from "@/polymet/components/status-badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -40,6 +40,66 @@ export function DashboardPage() {
     }
   };
 
+  // Memoize KPI calculations to avoid recalculating on every render
+  // Must be before conditional returns to follow Rules of Hooks
+  const kpiMetrics = useMemo(() => {
+    const totalEvents = interviewEvents.length;
+    const attendedEvents = interviewEvents.filter(
+      (e) => e.status === "attended"
+    ).length;
+    const ghostedEvents = interviewEvents.filter(
+      (e) => e.status === "ghosted"
+    ).length;
+    const pendingEvents = interviewEvents.filter(
+      (e) => e.status === "pending"
+    ).length;
+    const noShowRate =
+      totalEvents > 0 ? ((ghostedEvents / totalEvents) * 100).toFixed(1) : "0.0";
+
+    const activeInterviewers = interviewers.filter((i) => i.is_active).length;
+    const calendarSyncEnabled = interviewers.filter(
+      (i) => i.calendar_sync_enabled
+    ).length;
+
+    const interviewsPerWeek =
+      activeInterviewers > 0
+        ? (totalEvents / activeInterviewers / 4).toFixed(1)
+        : "0.0";
+
+    return {
+      totalEvents,
+      attendedEvents,
+      ghostedEvents,
+      pendingEvents,
+      noShowRate,
+      activeInterviewers,
+      calendarSyncEnabled,
+      interviewsPerWeek,
+    };
+  }, [interviewEvents, interviewers]);
+
+  // Memoize recent events sorting to avoid re-sorting on every render
+  const recentEvents = useMemo(
+    () =>
+      [...interviewEvents]
+        .sort(
+          (a, b) =>
+            new Date(b.start_time).getTime() - new Date(a.start_time).getTime()
+        )
+        .slice(0, 5),
+    [interviewEvents]
+  );
+
+  const formatDateTime = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleString("en-US", {
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
+
   if (loading) {
     return (
       <div className="space-y-8">
@@ -52,48 +112,6 @@ export function DashboardPage() {
       </div>
     );
   }
-  // Calculate KPIs
-  const totalEvents = interviewEvents.length;
-  const attendedEvents = interviewEvents.filter(
-    (e) => e.status === "attended"
-  ).length;
-  const ghostedEvents = interviewEvents.filter(
-    (e) => e.status === "ghosted"
-  ).length;
-  const pendingEvents = interviewEvents.filter(
-    (e) => e.status === "pending"
-  ).length;
-  const noShowRate =
-    totalEvents > 0 ? ((ghostedEvents / totalEvents) * 100).toFixed(1) : "0.0";
-
-  const activeInterviewers = interviewers.filter((i) => i.is_active).length;
-  const calendarSyncEnabled = interviewers.filter(
-    (i) => i.calendar_sync_enabled
-  ).length;
-
-  // Calculate interviews per week per interviewer
-  const interviewsPerWeek =
-    activeInterviewers > 0
-      ? (totalEvents / activeInterviewers / 4).toFixed(1)
-      : "0.0";
-
-  // Recent events
-  const recentEvents = interviewEvents
-    .sort(
-      (a, b) =>
-        new Date(b.start_time).getTime() - new Date(a.start_time).getTime()
-    )
-    .slice(0, 5);
-
-  const formatDateTime = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleString("en-US", {
-      month: "short",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
 
   return (
     <div className="space-y-8">
@@ -109,25 +127,25 @@ export function DashboardPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <KpiMetricCard
           title="No-Show Rate"
-          value={`${noShowRate}%`}
+          value={`${kpiMetrics.noShowRate}%`}
           target="< 2%"
-          trend={parseFloat(noShowRate) < 2 ? "down" : "up"}
+          trend={parseFloat(kpiMetrics.noShowRate) < 2 ? "down" : "up"}
           trendValue="0.6%"
           icon={ActivityIcon}
-          status={parseFloat(noShowRate) < 2 ? "success" : "danger"}
+          status={parseFloat(kpiMetrics.noShowRate) < 2 ? "success" : "danger"}
           description="vs last month"
         />
 
         <KpiMetricCard
           title="Interviews per Week"
-          value={interviewsPerWeek}
+          value={kpiMetrics.interviewsPerWeek}
           target="3-5"
           trend="up"
           trendValue="0.8"
           icon={CalendarIcon}
           status={
-            parseFloat(interviewsPerWeek) >= 3 &&
-            parseFloat(interviewsPerWeek) <= 5
+            parseFloat(kpiMetrics.interviewsPerWeek) >= 3 &&
+            parseFloat(kpiMetrics.interviewsPerWeek) <= 5
               ? "success"
               : "warning"
           }
@@ -136,10 +154,10 @@ export function DashboardPage() {
 
         <KpiMetricCard
           title="Active Interviewers"
-          value={activeInterviewers}
+          value={kpiMetrics.activeInterviewers}
           icon={UsersIcon}
           status="neutral"
-          description={`${calendarSyncEnabled} with calendar sync`}
+          description={`${kpiMetrics.calendarSyncEnabled} with calendar sync`}
         />
 
         <KpiMetricCard
@@ -163,7 +181,7 @@ export function DashboardPage() {
             <ClockIcon className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{pendingEvents}</div>
+            <div className="text-2xl font-bold">{kpiMetrics.pendingEvents}</div>
             <p className="text-xs text-muted-foreground mt-1">
               Require attention
             </p>
@@ -178,7 +196,7 @@ export function DashboardPage() {
             <CalendarIcon className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{attendedEvents}</div>
+            <div className="text-2xl font-bold">{kpiMetrics.attendedEvents}</div>
             <p className="text-xs text-muted-foreground mt-1">
               Successfully conducted
             </p>
@@ -191,7 +209,7 @@ export function DashboardPage() {
             <AlertCircleIcon className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{ghostedEvents}</div>
+            <div className="text-2xl font-bold">{kpiMetrics.ghostedEvents}</div>
             <p className="text-xs text-muted-foreground mt-1">
               Candidates didn't attend
             </p>

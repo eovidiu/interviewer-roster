@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import {
   Table,
   TableBody,
@@ -49,18 +49,21 @@ export function InterviewerTable({
   const [searchQuery, setSearchQuery] = useState("");
   const [roleFilter, setRoleFilter] = useState<string>("all");
 
-  const filteredInterviewers = interviewers.filter((interviewer) => {
-    const matchesSearch =
-      interviewer.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      interviewer.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      interviewer.skills.some((skill) =>
-        skill.toLowerCase().includes(searchQuery.toLowerCase())
-      );
+  // Memoize filtered interviewers to avoid re-filtering on every render
+  const filteredInterviewers = useMemo(() => {
+    return interviewers.filter((interviewer) => {
+      const matchesSearch =
+        interviewer.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        interviewer.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        interviewer.skills.some((skill) =>
+          skill.toLowerCase().includes(searchQuery.toLowerCase())
+        );
 
-    const matchesRole = roleFilter === "all" || interviewer.role === roleFilter;
+      const matchesRole = roleFilter === "all" || interviewer.role === roleFilter;
 
-    return matchesSearch && matchesRole;
-  });
+      return matchesSearch && matchesRole;
+    });
+  }, [interviewers, searchQuery, roleFilter]);
 
   const canEdit = userRole === "admin" || userRole === "talent";
   const canDelete = userRole === "admin";

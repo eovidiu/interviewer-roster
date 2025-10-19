@@ -2,6 +2,8 @@ import { useState, useEffect } from "react";
 import { InterviewerTable } from "@/polymet/components/interviewer-table";
 import { AddInterviewerDialog } from "@/polymet/components/add-interviewer-dialog";
 import { ExportDialog } from "@/polymet/components/export-dialog";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { ErrorAlert } from "@/components/ui/error-alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -27,6 +29,11 @@ export function InterviewersPage() {
   const [exportDialogOpen, setExportDialogOpen] = useState(false);
   const [editingInterviewer, setEditingInterviewer] =
     useState<Interviewer | null>(null);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [interviewerToDelete, setInterviewerToDelete] =
+    useState<Interviewer | null>(null);
+  const [errorAlertOpen, setErrorAlertOpen] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
   const { user } = useAuth();
   const userRole = user?.role ?? "viewer";
   const auditContext = user
@@ -58,15 +65,23 @@ export function InterviewersPage() {
     setAddDialogOpen(true);
   };
 
-  const handleDelete = async (interviewer: Interviewer) => {
-    if (confirm(`Are you sure you want to delete ${interviewer.name}?`)) {
-      try {
-        await db.deleteInterviewer(interviewer.email, auditContext);
-        await loadInterviewers();
-      } catch (error) {
-        console.error("Failed to delete interviewer:", error);
-        alert("Failed to delete interviewer");
-      }
+  const handleDelete = (interviewer: Interviewer) => {
+    setInterviewerToDelete(interviewer);
+    setDeleteConfirmOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!interviewerToDelete) return;
+
+    try {
+      await db.deleteInterviewer(interviewerToDelete.email, auditContext);
+      await loadInterviewers();
+    } catch (error) {
+      console.error("Failed to delete interviewer:", error);
+      setErrorMessage("Failed to delete interviewer");
+      setErrorAlertOpen(true);
+    } finally {
+      setInterviewerToDelete(null);
     }
   };
 
@@ -82,7 +97,8 @@ export function InterviewersPage() {
       await loadInterviewers();
     } catch (error) {
       console.error("Failed to toggle interviewer status:", error);
-      alert("Failed to update interviewer status");
+      setErrorMessage("Failed to update interviewer status");
+      setErrorAlertOpen(true);
     }
   };
 
@@ -105,7 +121,8 @@ export function InterviewersPage() {
       setAddDialogOpen(false);
     } catch (error) {
       console.error("Failed to save interviewer:", error);
-      alert("Failed to save interviewer");
+      setErrorMessage("Failed to save interviewer");
+      setErrorAlertOpen(true);
     }
   };
 
@@ -113,7 +130,8 @@ export function InterviewersPage() {
     try {
       if (type === "interviewers") {
         if (interviewers.length === 0) {
-          alert("No interviewers available to export.");
+          setErrorMessage("No interviewers available to export.");
+          setErrorAlertOpen(true);
           return;
         }
         exportInterviewersCsv(interviewers);
@@ -123,7 +141,8 @@ export function InterviewersPage() {
       if (type === "events") {
         const allEvents = await db.getInterviewEvents();
         if (allEvents.length === 0) {
-          alert("No interview events available to export.");
+          setErrorMessage("No interview events available to export.");
+          setErrorAlertOpen(true);
           return;
         }
         exportEventsCsv(allEvents);
@@ -133,17 +152,20 @@ export function InterviewersPage() {
       if (type === "audit_logs") {
         const logs = await db.getAuditLogs();
         if (logs.length === 0) {
-          alert("No audit logs available to export.");
+          setErrorMessage("No audit logs available to export.");
+          setErrorAlertOpen(true);
           return;
         }
         exportAuditLogsCsv(logs);
         return;
       }
 
-      alert("Unsupported export type selected.");
+      setErrorMessage("Unsupported export type selected.");
+      setErrorAlertOpen(true);
     } catch (error) {
       console.error("Failed to export data:", error);
-      alert("Failed to export data. Please try again.");
+      setErrorMessage("Failed to export data. Please try again.");
+      setErrorAlertOpen(true);
     }
   };
 
@@ -264,6 +286,25 @@ export function InterviewersPage() {
         onOpenChange={setExportDialogOpen}
         userRole={userRole}
         onExport={handleExport}
+      />
+
+      {/* Accessible Confirm Dialog */}
+      <ConfirmDialog
+        open={deleteConfirmOpen}
+        onOpenChange={setDeleteConfirmOpen}
+        title="Confirm Deletion"
+        description={`Are you sure you want to delete ${interviewerToDelete?.name}? This action cannot be undone.`}
+        onConfirm={confirmDelete}
+        confirmText="Delete"
+        cancelText="Cancel"
+        variant="destructive"
+      />
+
+      {/* Accessible Error Alert */}
+      <ErrorAlert
+        open={errorAlertOpen}
+        onOpenChange={setErrorAlertOpen}
+        message={errorMessage}
       />
     </div>
   );

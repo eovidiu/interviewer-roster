@@ -1,0 +1,152 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render, screen, waitFor } from '@testing-library/react';
+import { userEvent } from '@testing-library/user-event';
+import { InterviewersPage } from './interviewers-page';
+import { BrowserRouter } from 'react-router-dom';
+import { AuthProvider } from '@/polymet/data/auth-context';
+
+// Mock the database service
+vi.mock('@/polymet/data/database-service', () => ({
+  db: {
+    getInterviewers: vi.fn().mockResolvedValue([
+      {
+        id: '1',
+        name: 'John Doe',
+        email: 'john@example.com',
+        role: 'viewer',
+        skills: ['React', 'TypeScript'],
+        is_active: true,
+        calendar_sync_enabled: false,
+        timezone: 'America/Los_Angeles',
+        created_at: '2024-01-01T00:00:00Z',
+        updated_at: '2024-01-01T00:00:00Z',
+      },
+    ]),
+    deleteInterviewer: vi.fn().mockResolvedValue(undefined),
+    updateInterviewer: vi.fn().mockResolvedValue(undefined),
+    createInterviewer: vi.fn().mockResolvedValue(undefined),
+    getInterviewEvents: vi.fn().mockResolvedValue([]),
+    getAuditLogs: vi.fn().mockResolvedValue([]),
+  },
+}));
+
+// Mock CSV utils
+vi.mock('@/lib/csv-utils', () => ({
+  exportInterviewersCsv: vi.fn(),
+  exportEventsCsv: vi.fn(),
+  exportAuditLogsCsv: vi.fn(),
+}));
+
+const renderInterviewersPage = () => {
+  return render(
+    <BrowserRouter>
+      <AuthProvider>
+        <InterviewersPage />
+      </AuthProvider>
+    </BrowserRouter>
+  );
+};
+
+describe('Issue #21: Browser alert() and confirm() usage', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    // Mock localStorage for auth
+    vi.spyOn(Storage.prototype, 'getItem').mockReturnValue(
+      JSON.stringify({
+        name: 'Admin User',
+        email: 'admin@example.com',
+        picture: 'https://example.com/pic.jpg',
+        role: 'admin',
+      })
+    );
+  });
+
+  it('should NOT use native confirm() for delete confirmation', async () => {
+    const user = userEvent.setup();
+    const confirmSpy = vi.spyOn(window, 'confirm');
+
+    renderInterviewersPage();
+
+    // Wait for interviewers to load
+    await waitFor(() => {
+      expect(screen.getByText('John Doe')).toBeInTheDocument();
+    });
+
+    // Try to delete an interviewer
+    const actionsButton = screen.getByLabelText('Open actions menu');
+    await user.click(actionsButton);
+
+    const deleteButton = screen.getByText('Delete');
+    await user.click(deleteButton);
+
+    // This test SHOULD FAIL because the code currently uses window.confirm
+    expect(confirmSpy).not.toHaveBeenCalled();
+
+    // Instead, we should see an accessible AlertDialog
+    // This assertion will also fail initially
+    expect(screen.queryByRole('alertdialog')).toBeInTheDocument();
+  });
+
+  it('should NOT use native alert() for error messages', async () => {
+    const user = userEvent.setup();
+    const alertSpy = vi.spyOn(window, 'alert');
+
+    // Mock delete to fail
+    const { db } = await import('@/polymet/data/database-service');
+    vi.mocked(db.deleteInterviewer).mockRejectedValueOnce(new Error('Delete failed'));
+
+    renderInterviewersPage();
+
+    await waitFor(() => {
+      expect(screen.getByText('John Doe')).toBeInTheDocument();
+    });
+
+    // Try to delete (will fail)
+    const actionsButton = screen.getByLabelText('Open actions menu');
+    await user.click(actionsButton);
+
+    const deleteButton = screen.getByText('Delete');
+
+    // Mock confirm to return true
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+    await user.click(deleteButton);
+
+    await waitFor(() => {
+      // This test should now pass because the code uses ErrorAlert dialog
+      expect(alertSpy).not.toHaveBeenCalled();
+    });
+
+    // Instead, we should see an accessible error alert dialog
+    await waitFor(() => {
+      expect(screen.queryByRole('alertdialog')).toBeInTheDocument();
+    });
+  });
+
+  it('should use accessible AlertDialog component instead of confirm()', async () => {
+    renderInterviewersPage();
+
+    await waitFor(() => {
+      expect(screen.getByText('John Doe')).toBeInTheDocument();
+    });
+
+    // This test documents the expected behavior
+    // It will fail initially because AlertDialog is not implemented yet
+    const actionsButton = screen.getByLabelText('Open actions menu');
+    await userEvent.setup().click(actionsButton);
+
+    const deleteButton = screen.getByText('Delete');
+    await userEvent.setup().click(deleteButton);
+
+    // Should show AlertDialog with proper ARIA attributes
+    const dialog = await screen.findByRole('alertdialog');
+    expect(dialog).toBeInTheDocument();
+
+    // Should have accessible title and description
+    expect(screen.getByText(/confirm deletion/i)).toBeInTheDocument();
+    expect(screen.getByText(/are you sure/i)).toBeInTheDocument();
+
+    // Should have Cancel and Confirm buttons
+    expect(screen.getByRole('button', { name: /cancel/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /delete/i })).toBeInTheDocument();
+  });
+});

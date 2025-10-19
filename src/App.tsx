@@ -9,6 +9,7 @@ import { ReactNode, lazy, Suspense } from "react";
 import { AuthProvider } from "@/polymet/data/auth-context";
 import { DashboardLayout } from "@/polymet/layouts/dashboard-layout";
 import { useAuth } from "@/polymet/data/auth-context";
+import { ErrorBoundary } from "@/components/error-boundary";
 
 // Lazy load page components for better performance
 const DashboardPage = lazy(() => import("@/polymet/pages/dashboard-page").then(module => ({ default: module.DashboardPage })));
@@ -69,10 +70,11 @@ function RouteLoading() {
 
 export default function InterviewRosterApp() {
   return (
-    <AuthProvider>
-      <Router>
-        <Suspense fallback={<RouteLoading />}>
-          <Routes>
+    <ErrorBoundary>
+      <AuthProvider>
+        <Router>
+          <Suspense fallback={<RouteLoading />}>
+            <Routes>
           <Route path="/login" element={<LoginPage />} />
 
           <Route
@@ -162,10 +164,11 @@ export default function InterviewRosterApp() {
             }
           />
 
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-        </Suspense>
-      </Router>
-    </AuthProvider>
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+          </Suspense>
+        </Router>
+      </AuthProvider>
+    </ErrorBoundary>
   );
 }
