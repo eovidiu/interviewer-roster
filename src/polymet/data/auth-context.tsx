@@ -41,11 +41,24 @@ export function AuthProvider({ children }: AuthProviderProps) {
   useEffect(() => {
     // Simulate checking for existing session
     // In a real app, this would check for a stored token or session
-    const storedUser = localStorage.getItem("auth_user");
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
+    try {
+      const storedUser = localStorage.getItem("auth_user");
+      if (storedUser) {
+        const parsedUser = JSON.parse(storedUser);
+        setUser(parsedUser);
+      }
+    } catch (error) {
+      console.error('Failed to load user from storage:', error);
+      // Clear potentially corrupted data
+      try {
+        localStorage.removeItem("auth_user");
+      } catch (e) {
+        // localStorage might be completely unavailable (e.g., Safari private mode)
+        console.error('Failed to clear storage:', e);
+      }
+    } finally {
+      setIsLoading(false);
     }
-    setIsLoading(false);
   }, []);
 
   const signIn = () => {
@@ -58,12 +71,22 @@ export function AuthProvider({ children }: AuthProviderProps) {
       role: "admin",
     };
     setUser(mockUser);
-    localStorage.setItem("auth_user", JSON.stringify(mockUser));
+    try {
+      localStorage.setItem("auth_user", JSON.stringify(mockUser));
+    } catch (error) {
+      console.error('Failed to save user to storage:', error);
+      // Continue even if storage fails - user is still signed in for this session
+    }
   };
 
   const signOut = () => {
     setUser(null);
-    localStorage.removeItem("auth_user");
+    try {
+      localStorage.removeItem("auth_user");
+    } catch (error) {
+      console.error('Failed to remove user from storage:', error);
+      // User is still signed out in memory even if storage clear fails
+    }
   };
 
   return (

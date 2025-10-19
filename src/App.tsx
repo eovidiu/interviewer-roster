@@ -5,19 +5,21 @@ import {
   Navigate,
   useLocation,
 } from "react-router-dom";
-import { ReactNode } from "react";
+import { ReactNode, lazy, Suspense } from "react";
 import { AuthProvider } from "@/polymet/data/auth-context";
 import { DashboardLayout } from "@/polymet/layouts/dashboard-layout";
-import { DashboardPage } from "@/polymet/pages/dashboard-page";
-import { InterviewersPage } from "@/polymet/pages/interviewers-page";
-import { EventsPage } from "@/polymet/pages/events-page";
-import { SchedulePage } from "@/polymet/pages/schedule-page";
-import { MarkInterviewsPage } from "@/polymet/pages/mark-interviews-page";
-import { SettingsPage } from "@/polymet/pages/settings-page";
-import { DatabaseManagementPage } from "@/polymet/pages/database-management-page";
-import { AuditLogsPage } from "@/polymet/pages/audit-logs-page";
-import { LoginPage } from "@/polymet/pages/login-page";
 import { useAuth } from "@/polymet/data/auth-context";
+
+// Lazy load page components for better performance
+const DashboardPage = lazy(() => import("@/polymet/pages/dashboard-page").then(module => ({ default: module.DashboardPage })));
+const InterviewersPage = lazy(() => import("@/polymet/pages/interviewers-page").then(module => ({ default: module.InterviewersPage })));
+const EventsPage = lazy(() => import("@/polymet/pages/events-page").then(module => ({ default: module.EventsPage })));
+const SchedulePage = lazy(() => import("@/polymet/pages/schedule-page").then(module => ({ default: module.SchedulePage })));
+const MarkInterviewsPage = lazy(() => import("@/polymet/pages/mark-interviews-page").then(module => ({ default: module.MarkInterviewsPage })));
+const SettingsPage = lazy(() => import("@/polymet/pages/settings-page").then(module => ({ default: module.SettingsPage })));
+const DatabaseManagementPage = lazy(() => import("@/polymet/pages/database-management-page").then(module => ({ default: module.DatabaseManagementPage })));
+const AuditLogsPage = lazy(() => import("@/polymet/pages/audit-logs-page").then(module => ({ default: module.AuditLogsPage })));
+const LoginPage = lazy(() => import("@/polymet/pages/login-page").then(module => ({ default: module.LoginPage })));
 
 type Role = "viewer" | "talent" | "admin";
 
@@ -56,11 +58,21 @@ function ProtectedRoute({
   return <>{children}</>;
 }
 
+// Loading component for route transitions
+function RouteLoading() {
+  return (
+    <div className="min-h-screen flex items-center justify-center">
+      <div className="text-muted-foreground">Loading...</div>
+    </div>
+  );
+}
+
 export default function InterviewRosterApp() {
   return (
     <AuthProvider>
       <Router>
-        <Routes>
+        <Suspense fallback={<RouteLoading />}>
+          <Routes>
           <Route path="/login" element={<LoginPage />} />
 
           <Route
@@ -152,6 +164,7 @@ export default function InterviewRosterApp() {
 
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
+        </Suspense>
       </Router>
     </AuthProvider>
   );
