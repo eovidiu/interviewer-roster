@@ -33,6 +33,11 @@
  * - On first load, the database is seeded with mock data automatically
  * - Re-seed at any time from the **Database → Import Mock Data** action in the app
  *
+ * ### Initialization Guarantees:
+ * - `db.initialize()` now guards every public operation to ensure seeding finishes before reads or writes occur.
+ * - The stored payload carries a lightweight `meta.seedState` flag so the service can tell the difference between seeded, cleared, and custom datasets.
+ * - If the payload is missing, invalid, or unexpectedly empty (and not intentionally cleared), the service automatically re-seeds the mock data.
+ *
  * ## USING THE DATABASE SERVICE
  *
  * ### Import the service:

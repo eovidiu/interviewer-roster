@@ -1,26 +1,39 @@
-import { expect, afterEach, vi } from 'vitest';
-import { cleanup } from '@testing-library/react';
-import * as matchers from '@testing-library/jest-dom/matchers';
+import "@testing-library/jest-dom/vitest";
+import { afterEach, beforeEach, vi } from "vitest";
+import { cleanup } from "@testing-library/react";
+import { db } from "@/polymet/data/database-service";
 
-// Extend Vitest's expect with jest-dom matchers
-expect.extend(matchers);
+if (!window.matchMedia) {
+  Object.defineProperty(window, "matchMedia", {
+    writable: true,
+    value: vi.fn().mockImplementation((query: string) => ({
+      matches: false,
+      media: query,
+      onchange: null,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    })),
+  });
+}
 
-// Cleanup after each test
-afterEach(() => {
-  cleanup();
+beforeEach(async () => {
+  localStorage.clear();
+  sessionStorage.clear();
+  await db.resetDatabase();
+  localStorage.setItem(
+    "auth_user",
+    JSON.stringify({
+      name: "Smoke Test Admin",
+      email: "smoke.admin@example.com",
+      picture: "https://example.com/avatar.png",
+      role: "admin",
+    })
+  );
 });
 
-// Mock window.matchMedia (used by mobile hook)
-Object.defineProperty(window, 'matchMedia', {
-  writable: true,
-  value: vi.fn().mockImplementation(query => ({
-    matches: false,
-    media: query,
-    onchange: null,
-    addListener: vi.fn(),
-    removeListener: vi.fn(),
-    addEventListener: vi.fn(),
-    removeEventListener: vi.fn(),
-    dispatchEvent: vi.fn(),
-  })),
+afterEach(() => {
+  cleanup();
 });
