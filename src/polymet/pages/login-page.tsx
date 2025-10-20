@@ -9,7 +9,8 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { RoleBadge } from "@/polymet/components/role-badge";
-import { CalendarIcon, UserIcon } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { CalendarIcon, UserIcon, AlertCircleIcon } from "lucide-react";
 import { useState } from "react";
 
 type UserRole = "admin" | "talent" | "viewer";
@@ -47,6 +48,7 @@ export function LoginPage() {
   const location = useLocation();
   const navigate = useNavigate();
   const [signingIn, setSigningIn] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const from =
     (location.state as { from?: { pathname: string } } | undefined)?.from
       ?.pathname || "/";
@@ -54,10 +56,12 @@ export function LoginPage() {
   const handleSignIn = async (demoUser: DemoUser) => {
     try {
       setSigningIn(true);
+      setError(null); // Clear any previous errors
       await signIn(demoUser.email, demoUser.name);
       navigate(from, { replace: true });
     } catch (error) {
       console.error("Sign in error:", error);
+      setError("Login failed. Please try again.");
       setSigningIn(false);
     }
   };
@@ -96,6 +100,13 @@ export function LoginPage() {
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
+          {error && (
+            <Alert variant="destructive">
+              <AlertCircleIcon className="h-4 w-4" />
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
+
           <div className="space-y-3">
             {demoUsers.map((demoUser) => (
               <Button
@@ -103,6 +114,7 @@ export function LoginPage() {
                 onClick={() => handleSignIn(demoUser)}
                 variant="outline"
                 className="w-full h-auto p-4 flex flex-col items-start gap-2 hover:bg-muted"
+                disabled={signingIn}
               >
                 <div className="flex items-center gap-3 w-full">
                   <UserIcon className="h-5 w-5 text-muted-foreground" />
