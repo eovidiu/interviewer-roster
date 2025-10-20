@@ -52,10 +52,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
     try {
       setIsLoading(true);
 
+      // Get API URL from environment variable
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+
       // Call backend API to login
       // In production, this would integrate with Google OAuth
       // For development, we use mock emails with different roles
-      const response = await fetch('http://localhost:3000/api/auth/login', {
+      const response = await fetch(`${apiUrl}/api/auth/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
