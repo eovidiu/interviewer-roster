@@ -91,7 +91,7 @@ export default function InterviewRosterApp() {
           <Route
             path="/interviewers"
             element={
-              <ProtectedRoute>
+              <ProtectedRoute allowedRoles={["talent", "admin"]}>
                 <DashboardLayout>
                   <InterviewersPage />
                 </DashboardLayout>
@@ -102,7 +102,7 @@ export default function InterviewRosterApp() {
           <Route
             path="/events"
             element={
-              <ProtectedRoute>
+              <ProtectedRoute allowedRoles={["talent", "admin"]}>
                 <DashboardLayout>
                   <EventsPage />
                 </DashboardLayout>
@@ -113,7 +113,7 @@ export default function InterviewRosterApp() {
           <Route
             path="/schedule"
             element={
-              <ProtectedRoute>
+              <ProtectedRoute allowedRoles={["talent", "admin"]}>
                 <DashboardLayout>
                   <SchedulePage />
                 </DashboardLayout>

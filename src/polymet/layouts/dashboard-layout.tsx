@@ -54,7 +54,7 @@ export function DashboardLayout({
       name: "Schedule",
       href: "/schedule",
       icon: CalendarDaysIcon,
-      roles: ["viewer", "talent", "admin"],
+      roles: ["talent", "admin"], // Viewer: Dashboard only
     },
     {
       name: "Mark Interviews",
@@ -66,31 +66,31 @@ export function DashboardLayout({
       name: "Interviewers",
       href: "/interviewers",
       icon: UsersIcon,
-      roles: ["viewer", "talent", "admin"],
+      roles: ["talent", "admin"], // Viewer: Dashboard only
     },
     {
       name: "Events",
       href: "/events",
       icon: CalendarIcon,
-      roles: ["viewer", "talent", "admin"],
+      roles: ["talent", "admin"], // Viewer: Dashboard only
     },
     {
       name: "Database",
       href: "/database",
       icon: DatabaseIcon,
-      roles: ["admin"],
+      roles: ["admin"], // TA: No access
     },
     {
       name: "Audit Logs",
       href: "/audit-logs",
       icon: FileTextIcon,
-      roles: ["admin"],
+      roles: ["admin"], // TA: No access
     },
     {
       name: "Settings",
       href: "/settings",
       icon: SettingsIcon,
-      roles: ["admin"],
+      roles: ["admin"], // TA: No access
     },
   ];
 
