@@ -73,8 +73,11 @@ export function LoginPage() {
   if (isLoading || signingIn) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+        <div className="text-center" role="status" aria-live="polite">
+          <div
+            className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"
+            aria-hidden="true"
+          ></div>
           <p className="text-muted-foreground">
             {signingIn ? "Signing in..." : "Loading..."}
           </p>
@@ -107,31 +110,34 @@ export function LoginPage() {
             </Alert>
           )}
 
-          <div className="space-y-3">
-            {demoUsers.map((demoUser) => (
-              <Button
-                key={demoUser.email}
-                onClick={() => handleSignIn(demoUser)}
-                variant="outline"
-                className="w-full h-auto p-4 flex flex-col items-start gap-2 hover:bg-muted"
-                disabled={signingIn}
-              >
-                <div className="flex items-center gap-3 w-full">
-                  <UserIcon className="h-5 w-5 text-muted-foreground" />
-                  <div className="flex-1 text-left">
-                    <div className="font-medium">{demoUser.name}</div>
-                    <div className="text-xs text-muted-foreground">
-                      {demoUser.email}
+          <form onSubmit={(e) => { e.preventDefault(); }}>
+            <div className="space-y-3">
+              {demoUsers.map((demoUser) => (
+                <Button
+                  key={demoUser.email}
+                  type="button"
+                  onClick={() => handleSignIn(demoUser)}
+                  variant="outline"
+                  className="w-full h-auto p-4 flex flex-col items-start gap-2 hover:bg-muted"
+                  disabled={signingIn}
+                >
+                  <div className="flex items-center gap-3 w-full">
+                    <UserIcon className="h-5 w-5 text-muted-foreground" />
+                    <div className="flex-1 text-left">
+                      <div className="font-medium">{demoUser.name}</div>
+                      <div className="text-xs text-muted-foreground">
+                        {demoUser.email}
+                      </div>
                     </div>
+                    <RoleBadge role={demoUser.role} />
                   </div>
-                  <RoleBadge role={demoUser.role} />
-                </div>
-                <div className="text-xs text-muted-foreground text-left pl-8">
-                  {demoUser.description}
-                </div>
-              </Button>
-            ))}
-          </div>
+                  <div className="text-xs text-muted-foreground text-left pl-8">
+                    {demoUser.description}
+                  </div>
+                </Button>
+              ))}
+            </div>
+          </form>
 
           <div className="text-center text-xs text-muted-foreground pt-4 border-t">
             In production, this would use Google OAuth. For demo purposes, select a

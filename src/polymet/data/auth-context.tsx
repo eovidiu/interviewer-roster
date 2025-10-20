@@ -42,9 +42,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Check if we have a token and try to restore session
-    // For now, we'll start fresh each time (token is in memory only)
-    // In production, you might use httpOnly cookies or secure session storage
+    // No session restoration for security (token stored in memory only - see Issue #24)
+    // Session is lost on page refresh, requiring re-login
+    // This prevents XSS attacks from stealing tokens via localStorage
+    // No cleanup needed as this only runs once on mount
     setIsLoading(false);
   }, []);
 
