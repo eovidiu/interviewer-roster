@@ -98,7 +98,7 @@ export function EventsPage() {
           alert("No interview events available to export.");
           return;
         }
-        exportEventsCsv(events);
+        await exportEventsCsv(events);
         return;
       }
 
@@ -108,7 +108,7 @@ export function EventsPage() {
           alert("No interviewers available to export.");
           return;
         }
-        exportInterviewersCsv(roster);
+        await exportInterviewersCsv(roster);
         return;
       }
 
@@ -118,7 +118,7 @@ export function EventsPage() {
           alert("No audit logs available to export.");
           return;
         }
-        exportAuditLogsCsv(logs);
+        await exportAuditLogsCsv(logs);
         return;
       }
 

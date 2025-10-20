@@ -1,4 +1,3 @@
-import Papa from "papaparse";
 import type {
   AuditLog,
   InterviewEvent,
@@ -27,7 +26,9 @@ function triggerDownload({ filename, content, mimeType }: CsvExportResult) {
   URL.revokeObjectURL(url);
 }
 
-export function exportInterviewersCsv(interviewers: Interviewer[]) {
+export async function exportInterviewersCsv(interviewers: Interviewer[]) {
+  // Lazy load PapaParse only when exporting
+  const Papa = (await import("papaparse")).default;
   const rows = interviewers.map((interviewer) => ({
     id: interviewer.id,
     name: interviewer.name,
@@ -60,7 +61,9 @@ export function exportInterviewersCsv(interviewers: Interviewer[]) {
   });
 }
 
-export function exportEventsCsv(events: InterviewEvent[]) {
+export async function exportEventsCsv(events: InterviewEvent[]) {
+  // Lazy load PapaParse only when exporting
+  const Papa = (await import("papaparse")).default;
   const rows = events.map((event) => ({
     id: event.id,
     interviewer_email: event.interviewer_email,
@@ -97,7 +100,9 @@ export function exportEventsCsv(events: InterviewEvent[]) {
   });
 }
 
-export function exportAuditLogsCsv(logs: AuditLog[]) {
+export async function exportAuditLogsCsv(logs: AuditLog[]) {
+  // Lazy load PapaParse only when exporting
+  const Papa = (await import("papaparse")).default;
   const rows = logs.map((log) => ({
     id: log.id,
     timestamp: log.timestamp,
@@ -124,6 +129,9 @@ export function exportAuditLogsCsv(logs: AuditLog[]) {
 export async function parseCsvFile(
   file: File
 ): Promise<{ dataset: CsvDataset; rows: Record<string, string>[] }> {
+  // Lazy load PapaParse only when parsing
+  const Papa = (await import("papaparse")).default;
+
   const text = await file.text();
   const parsed = Papa.parse<Record<string, string>>(text, {
     header: true,

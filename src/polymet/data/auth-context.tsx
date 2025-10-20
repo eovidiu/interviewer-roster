@@ -5,19 +5,21 @@ import {
   useState,
   useEffect,
 } from "react";
+import { apiClient } from "@/lib/api-client";
 
 interface User {
   name: string;
   email: string;
-  picture: string;
+  picture?: string;
   role: "viewer" | "talent" | "admin";
 }
 
 interface AuthContextType {
   user: User | null;
   isLoading: boolean;
-  signIn: () => void;
+  signIn: (email?: string, name?: string) => Promise<void>;
   signOut: () => void;
+  token: string | null;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -36,61 +38,79 @@ interface AuthProviderProps {
 
 export function AuthProvider({ children }: AuthProviderProps) {
   const [user, setUser] = useState<User | null>(null);
+  const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Simulate checking for existing session
-    // In a real app, this would check for a stored token or session
-    try {
-      const storedUser = localStorage.getItem("auth_user");
-      if (storedUser) {
-        const parsedUser = JSON.parse(storedUser);
-        setUser(parsedUser);
-      }
-    } catch (error) {
-      console.error('Failed to load user from storage:', error);
-      // Clear potentially corrupted data
-      try {
-        localStorage.removeItem("auth_user");
-      } catch (e) {
-        // localStorage might be completely unavailable (e.g., Safari private mode)
-        console.error('Failed to clear storage:', e);
-      }
-    } finally {
-      setIsLoading(false);
-    }
+    // No session restoration for security (token stored in memory only - see Issue #24)
+    // Session is lost on page refresh, requiring re-login
+    // This prevents XSS attacks from stealing tokens via localStorage
+    // No cleanup needed as this only runs once on mount
+    setIsLoading(false);
   }, []);
 
-  const signIn = () => {
-    // In a real app, this would trigger Google OAuth flow
-    // For demo purposes, we'll simulate a successful login
-    const mockUser: User = {
-      name: "Sarah Chen",
-      email: "sarah.chen@company.com",
-      picture: "https://github.com/yusufhilmi.png",
-      role: "admin",
-    };
-    setUser(mockUser);
+  const signIn = async (email: string = 'admin@example.com', name?: string) => {
     try {
-      localStorage.setItem("auth_user", JSON.stringify(mockUser));
+      setIsLoading(true);
+
+      // Get API URL from environment variable
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+
+      // Call backend API to login
+      // In production, this would integrate with Google OAuth
+      // For development, we use mock emails with different roles
+      const response = await fetch(`${apiUrl}/api/auth/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email,
+          name: name || email.split('@')[0],
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Login failed');
+      }
+
+      const data = await response.json();
+
+      // Store token in memory (NOT localStorage for security - see Issue #24)
+      setToken(data.token);
+
+      // Set token in API client for all future requests
+      apiClient.setToken(data.token);
+
+      // Store user info
+      setUser({
+        email: data.user.email,
+        name: data.user.name,
+        role: data.user.role,
+        picture: "https://github.com/yusufhilmi.png", // Mock picture
+      });
+
+      console.log('✅ Logged in successfully with backend API');
     } catch (error) {
-      console.error('Failed to save user to storage:', error);
-      // Continue even if storage fails - user is still signed in for this session
+      console.error('Login error:', error);
+      throw error;
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const signOut = () => {
     setUser(null);
-    try {
-      localStorage.removeItem("auth_user");
-    } catch (error) {
-      console.error('Failed to remove user from storage:', error);
-      // User is still signed out in memory even if storage clear fails
-    }
+    setToken(null);
+
+    // Clear token from API client
+    apiClient.clearToken();
+
+    console.log('✅ Logged out successfully');
   };
 
   return (
-    <AuthContext.Provider value={{ user, isLoading, signIn, signOut }}>
+    <AuthContext.Provider value={{ user, isLoading, signIn, signOut, token }}>
       {children}
     </AuthContext.Provider>
   );

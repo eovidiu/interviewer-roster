@@ -12,13 +12,18 @@ import {
   AlertCircleIcon,
 } from "lucide-react";
 import { db } from "@/polymet/data/database-service";
+import { useAuth } from "@/polymet/data/auth-context";
 import type { InterviewEvent } from "@/polymet/data/mock-interview-events-data";
 import type { Interviewer } from "@/polymet/data/mock-interviewers-data";
 
 export function DashboardPage() {
+  const { user } = useAuth();
   const [interviewEvents, setInterviewEvents] = useState<InterviewEvent[]>([]);
   const [interviewers, setInterviewers] = useState<Interviewer[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const userRole = user?.role ?? "viewer";
+  const canAddInterviewer = userRole === "admin" || userRole === "talent";
 
   useEffect(() => {
     loadData();
@@ -254,23 +259,25 @@ export function DashboardPage() {
       </Card>
 
       {/* Quick Actions */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Quick Actions</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Button className="w-full">
-              <UsersIcon className="h-4 w-4 mr-2" />
-              Add Interviewer
-            </Button>
-            <Button variant="outline" className="w-full">
-              <ActivityIcon className="h-4 w-4 mr-2" />
-              View Reports
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+      {canAddInterviewer && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Quick Actions</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Button className="w-full">
+                <UsersIcon className="h-4 w-4 mr-2" />
+                Add Interviewer
+              </Button>
+              <Button variant="outline" className="w-full">
+                <ActivityIcon className="h-4 w-4 mr-2" />
+                View Reports
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
