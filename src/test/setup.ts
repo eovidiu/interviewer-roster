@@ -1,7 +1,8 @@
 import "@testing-library/jest-dom/vitest";
-import { afterEach, beforeEach, vi } from "vitest";
+import { afterEach, afterAll, beforeAll, beforeEach, vi } from "vitest";
 import { cleanup } from "@testing-library/react";
 import { db } from "@/polymet/data/database-service";
+import { server } from "@/mocks/server";
 
 if (!window.matchMedia) {
   Object.defineProperty(window, "matchMedia", {
@@ -18,6 +19,11 @@ if (!window.matchMedia) {
     })),
   });
 }
+
+// Start MSW server before all tests
+beforeAll(() => {
+  server.listen({ onUnhandledRequest: 'error' });
+});
 
 beforeEach(async () => {
   localStorage.clear();
@@ -46,5 +52,11 @@ beforeEach(async () => {
 });
 
 afterEach(() => {
+  server.resetHandlers();
   cleanup();
+});
+
+// Clean up MSW server after all tests
+afterAll(() => {
+  server.close();
 });
