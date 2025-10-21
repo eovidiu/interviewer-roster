@@ -10,7 +10,6 @@
 
 import { describe, it, expect, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
-import { userEvent } from '@testing-library/user-event';
 import { BrowserRouter } from 'react-router-dom';
 import { AuthProvider } from '@/polymet/data/auth-context';
 import { InterviewersPage } from '@/polymet/pages/interviewers-page';
@@ -22,12 +21,10 @@ import { server } from '@/mocks/server';
 describe('Issue #42: End-to-End Integration Testing', () => {
   describe('Authentication Flow', () => {
     it('should login and get JWT from backend', async () => {
-      const user = userEvent.setup();
-
       // Mock auth response
       server.use(
         http.post('http://localhost:3000/api/auth/login', async ({ request }) => {
-          const body = await request.json() as { email: string };
+          const body = (await request.json()) as { email: string };
           return HttpResponse.json({
             token: 'test-jwt-token',
             user: {
@@ -85,13 +82,19 @@ describe('Issue #42: End-to-End Integration Testing', () => {
     });
 
     it('should CREATE interviewer via API', async () => {
-      const user = userEvent.setup();
-      let createdInterviewer: any = null;
+      interface CreatedInterviewer {
+        id: string;
+        created_at: string;
+        updated_at: string;
+        [key: string]: unknown;
+      }
+
+      let createdInterviewer: CreatedInterviewer | null = null;
 
       // Override the POST handler to capture created interviewer
       server.use(
         http.post('http://localhost:3000/api/interviewers', async ({ request }) => {
-          const body = await request.json();
+          const body = (await request.json()) as Record<string, unknown>;
           createdInterviewer = {
             id: '999',
             ...body,
@@ -184,11 +187,17 @@ describe('Issue #42: End-to-End Integration Testing', () => {
     });
 
     it('should UPDATE event via API (mark attendance)', async () => {
-      let updatedEvent: any = null;
+      interface UpdatedEvent {
+        id: string | readonly string[];
+        updated_at: string;
+        [key: string]: unknown;
+      }
+
+      let updatedEvent: UpdatedEvent | null = null;
 
       server.use(
         http.put('http://localhost:3000/api/events/:id', async ({ request, params }) => {
-          const body = await request.json();
+          const body = (await request.json()) as Record<string, unknown>;
           updatedEvent = {
             id: params.id,
             ...body,

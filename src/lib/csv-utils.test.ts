@@ -18,10 +18,10 @@ import type { Interviewer, InterviewEvent, AuditLog } from '@/polymet/data/datab
 
 describe('CSV Export Functions', () => {
   // Mock DOM APIs
-  let mockCreateElement: any;
-  let mockAppendChild: any;
-  let mockRemoveChild: any;
-  let mockClick: any;
+  let mockCreateElement: ReturnType<typeof vi.spyOn>;
+  let mockAppendChild: ReturnType<typeof vi.fn>;
+  let mockRemoveChild: ReturnType<typeof vi.fn>;
+  let mockClick: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
     mockClick = vi.fn();
@@ -36,7 +36,7 @@ describe('CSV Export Functions', () => {
       click: mockClick,
       href: '',
       download: '',
-    } as any);
+    } as unknown as HTMLElement);
     vi.spyOn(document.body, 'appendChild').mockImplementation(mockAppendChild);
     vi.spyOn(document.body, 'removeChild').mockImplementation(mockRemoveChild);
   });

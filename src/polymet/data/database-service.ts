@@ -80,6 +80,7 @@ interface DatabaseMeta {
   lastUpdatedAt: string;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 class DatabaseService {
   private storageKey = "interview_roster_db";
   private initialized = false;
@@ -787,7 +788,12 @@ class DatabaseService {
 }
 
 // Export singleton instance
-export const db = new DatabaseService();
+// NOTE: Now using API-based implementation (see api-database-service.ts)
+// To switch back to localStorage, comment out the import below and uncomment the localStorage code
 
-// Auto-initialize on import
-db.initialize().catch(console.error);
+import { apiDatabaseService as db } from './api-database-service'
+export { db }
+
+// localStorage implementation (commented out - now using API):
+// export const db = new DatabaseService();
+// db.initialize().catch(console.error);

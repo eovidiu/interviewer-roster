@@ -107,7 +107,7 @@ describe('Issue #32: Color contrast for badge variants', () => {
 
   it('should have proper color values defined', () => {
     // Verify all colors are valid hex codes
-    Object.entries(colors).forEach(([name, hex]) => {
+    Object.entries(colors).forEach(([, hex]) => {
       expect(hex).toMatch(/^#[0-9a-f]{6}$/i);
     });
   });

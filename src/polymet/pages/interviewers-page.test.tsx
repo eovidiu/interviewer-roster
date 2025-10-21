@@ -4,8 +4,6 @@ import { userEvent } from '@testing-library/user-event';
 import { InterviewersPage } from './interviewers-page';
 import { BrowserRouter } from 'react-router-dom';
 import { AuthProvider } from '@/polymet/data/auth-context';
-import { http, HttpResponse } from 'msw';
-import { server } from '@/mocks/server';
 
 // Mock CSV utils (these are still external dependencies to mock)
 vi.mock('@/lib/csv-utils', () => ({
