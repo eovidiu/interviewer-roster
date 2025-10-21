@@ -4,33 +4,10 @@ import { userEvent } from '@testing-library/user-event';
 import { InterviewersPage } from './interviewers-page';
 import { BrowserRouter } from 'react-router-dom';
 import { AuthProvider } from '@/polymet/data/auth-context';
+import { http, HttpResponse } from 'msw';
+import { server } from '@/mocks/server';
 
-// Mock the database service
-vi.mock('@/polymet/data/database-service', () => ({
-  db: {
-    getInterviewers: vi.fn().mockResolvedValue([
-      {
-        id: '1',
-        name: 'John Doe',
-        email: 'john@example.com',
-        role: 'viewer',
-        skills: ['React', 'TypeScript'],
-        is_active: true,
-        calendar_sync_enabled: false,
-        timezone: 'America/Los_Angeles',
-        created_at: '2024-01-01T00:00:00Z',
-        updated_at: '2024-01-01T00:00:00Z',
-      },
-    ]),
-    deleteInterviewer: vi.fn().mockResolvedValue(undefined),
-    updateInterviewer: vi.fn().mockResolvedValue(undefined),
-    createInterviewer: vi.fn().mockResolvedValue(undefined),
-    getInterviewEvents: vi.fn().mockResolvedValue([]),
-    getAuditLogs: vi.fn().mockResolvedValue([]),
-  },
-}));
-
-// Mock CSV utils
+// Mock CSV utils (these are still external dependencies to mock)
 vi.mock('@/lib/csv-utils', () => ({
   exportInterviewersCsv: vi.fn(),
   exportEventsCsv: vi.fn(),
