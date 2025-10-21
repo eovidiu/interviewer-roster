@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { AuditLogTable } from "@/polymet/components/audit-log-table";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ErrorAlert } from "@/components/ui/error-alert";
 import {
   DownloadIcon,
   FileTextIcon,
@@ -15,6 +16,8 @@ import { exportAuditLogsCsv } from "@/lib/csv-utils";
 export function AuditLogsPage() {
   const [logs, setLogs] = useState<AuditLog[]>([]);
   const [loading, setLoading] = useState(true);
+  const [errorAlertOpen, setErrorAlertOpen] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
 
   useEffect(() => {
     const loadLogs = async () => {
@@ -39,7 +42,8 @@ export function AuditLogsPage() {
 
   const handleExport = async () => {
     if (logs.length === 0) {
-      alert("No audit logs available to export.");
+      setErrorMessage("No audit logs available to export.");
+      setErrorAlertOpen(true);
       return;
     }
 
@@ -47,7 +51,8 @@ export function AuditLogsPage() {
       await exportAuditLogsCsv(logs);
     } catch (error) {
       console.error("Failed to export audit logs:", error);
-      alert("Failed to export audit logs. Please try again.");
+      setErrorMessage("Failed to export audit logs. Please try again.");
+      setErrorAlertOpen(true);
     }
   };
 
@@ -172,6 +177,13 @@ export function AuditLogsPage() {
           <AuditLogTable logs={logs} />
         </CardContent>
       </Card>
+
+      {/* Error Alert */}
+      <ErrorAlert
+        open={errorAlertOpen}
+        onOpenChange={setErrorAlertOpen}
+        message={errorMessage}
+      />
     </div>
   );
 }
