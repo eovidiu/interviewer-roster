@@ -150,3 +150,134 @@ describe('Issue #21: Browser alert() and confirm() usage', () => {
     expect(screen.getByRole('button', { name: /delete/i })).toBeInTheDocument();
   });
 });
+
+describe('Issue #40: Success notifications after mutations', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    // Mock localStorage for auth as admin
+    vi.spyOn(Storage.prototype, 'getItem').mockReturnValue(
+      JSON.stringify({
+        name: 'Admin User',
+        email: 'admin@example.com',
+        picture: 'https://example.com/pic.jpg',
+        role: 'admin',
+      })
+    );
+  });
+
+  it('should show success message after creating an interviewer', async () => {
+    const user = userEvent.setup();
+
+    renderInterviewersPage();
+
+    await waitFor(() => {
+      expect(screen.getByText('John Doe')).toBeInTheDocument();
+    });
+
+    // Click Add Interviewer button
+    const addButton = screen.getByRole('button', { name: /add interviewer/i });
+    await user.click(addButton);
+
+    // Fill in the form (assuming the dialog opens)
+    // Note: This test will fail until we implement success notification
+    const nameInput = await screen.findByLabelText(/name/i);
+    await user.type(nameInput, 'Jane Smith');
+
+    const emailInput = screen.getByLabelText(/email/i);
+    await user.type(emailInput, 'jane@example.com');
+
+    // Submit the form
+    const submitButton = screen.getByRole('button', { name: /save|submit/i });
+    await user.click(submitButton);
+
+    // Should show success alert
+    await waitFor(() => {
+      const successDialog = screen.queryByRole('alertdialog');
+      expect(successDialog).toBeInTheDocument();
+      expect(screen.getByText(/success/i)).toBeInTheDocument();
+      expect(screen.getByText(/interviewer.*created|added successfully/i)).toBeInTheDocument();
+    });
+  });
+
+  it('should show success message after updating an interviewer', async () => {
+    const user = userEvent.setup();
+
+    renderInterviewersPage();
+
+    await waitFor(() => {
+      expect(screen.getByText('John Doe')).toBeInTheDocument();
+    });
+
+    // Open actions menu and click Edit
+    const actionsButton = screen.getByLabelText('Open actions menu');
+    await user.click(actionsButton);
+
+    const editButton = screen.getByText('Edit');
+    await user.click(editButton);
+
+    // Modify the interviewer
+    const nameInput = await screen.findByLabelText(/name/i);
+    await user.clear(nameInput);
+    await user.type(nameInput, 'John Updated');
+
+    // Submit the form
+    const submitButton = screen.getByRole('button', { name: /save|submit/i });
+    await user.click(submitButton);
+
+    // Should show success alert
+    await waitFor(() => {
+      expect(screen.queryByRole('alertdialog')).toBeInTheDocument();
+      expect(screen.getByText(/success/i)).toBeInTheDocument();
+      expect(screen.getByText(/interviewer.*updated successfully/i)).toBeInTheDocument();
+    });
+  });
+
+  it('should show success message after deleting an interviewer', async () => {
+    const user = userEvent.setup();
+
+    renderInterviewersPage();
+
+    await waitFor(() => {
+      expect(screen.getByText('John Doe')).toBeInTheDocument();
+    });
+
+    // Open actions menu and click Delete
+    const actionsButton = screen.getByLabelText('Open actions menu');
+    await user.click(actionsButton);
+
+    const deleteButton = screen.getByText('Delete');
+    await user.click(deleteButton);
+
+    // Confirm deletion
+    const confirmButton = await screen.findByRole('button', { name: /delete/i });
+    await user.click(confirmButton);
+
+    // Should show success alert
+    await waitFor(() => {
+      expect(screen.queryByRole('alertdialog')).toBeInTheDocument();
+      expect(screen.getByText(/success/i)).toBeInTheDocument();
+      expect(screen.getByText(/interviewer.*deleted successfully/i)).toBeInTheDocument();
+    });
+  });
+
+  it('should show success message after toggling interviewer active status', async () => {
+    const user = userEvent.setup();
+
+    renderInterviewersPage();
+
+    await waitFor(() => {
+      expect(screen.getByText('John Doe')).toBeInTheDocument();
+    });
+
+    // Find the active toggle switch/button
+    const toggleButton = screen.getByLabelText(/toggle active status/i);
+    await user.click(toggleButton);
+
+    // Should show success alert
+    await waitFor(() => {
+      expect(screen.queryByRole('alertdialog')).toBeInTheDocument();
+      expect(screen.getByText(/success/i)).toBeInTheDocument();
+      expect(screen.getByText(/status.*updated successfully/i)).toBeInTheDocument();
+    });
+  });
+});

@@ -4,6 +4,7 @@ import { AddInterviewerDialog } from "@/polymet/components/add-interviewer-dialo
 import { ExportDialog } from "@/polymet/components/export-dialog";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { ErrorAlert } from "@/components/ui/error-alert";
+import { SuccessAlert } from "@/components/ui/success-alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -34,6 +35,8 @@ export function InterviewersPage() {
     useState<Interviewer | null>(null);
   const [errorAlertOpen, setErrorAlertOpen] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+  const [successAlertOpen, setSuccessAlertOpen] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
   const { user } = useAuth();
   const userRole = user?.role ?? "viewer";
   const auditContext = user
@@ -76,6 +79,8 @@ export function InterviewersPage() {
     try {
       await db.deleteInterviewer(interviewerToDelete.email, auditContext);
       await loadInterviewers();
+      setSuccessMessage("Interviewer deleted successfully");
+      setSuccessAlertOpen(true);
     } catch (error) {
       console.error("Failed to delete interviewer:", error);
       setErrorMessage("Failed to delete interviewer");
@@ -95,6 +100,8 @@ export function InterviewersPage() {
         auditContext
       );
       await loadInterviewers();
+      setSuccessMessage("Interviewer status updated successfully");
+      setSuccessAlertOpen(true);
     } catch (error) {
       console.error("Failed to toggle interviewer status:", error);
       setErrorMessage("Failed to update interviewer status");
@@ -110,15 +117,18 @@ export function InterviewersPage() {
           data,
           auditContext
         );
+        setSuccessMessage("Interviewer updated successfully");
       } else {
         await db.createInterviewer(
           data as Omit<Interviewer, "id" | "created_at" | "updated_at">,
           auditContext
         );
+        setSuccessMessage("Interviewer added successfully");
       }
       await loadInterviewers();
       setEditingInterviewer(null);
       setAddDialogOpen(false);
+      setSuccessAlertOpen(true);
     } catch (error) {
       console.error("Failed to save interviewer:", error);
       setErrorMessage("Failed to save interviewer");
@@ -305,6 +315,13 @@ export function InterviewersPage() {
         open={errorAlertOpen}
         onOpenChange={setErrorAlertOpen}
         message={errorMessage}
+      />
+
+      {/* Accessible Success Alert */}
+      <SuccessAlert
+        open={successAlertOpen}
+        onOpenChange={setSuccessAlertOpen}
+        message={successMessage}
       />
     </div>
   );

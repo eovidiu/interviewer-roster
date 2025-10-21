@@ -2,6 +2,8 @@ import { useState, useEffect } from "react";
 import { EventsTable } from "@/polymet/components/events-table";
 import { MarkAttendanceDialog } from "@/polymet/components/mark-attendance-dialog";
 import { ExportDialog } from "@/polymet/components/export-dialog";
+import { ErrorAlert } from "@/components/ui/error-alert";
+import { SuccessAlert } from "@/components/ui/success-alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -30,6 +32,10 @@ export function EventsPage() {
   const [selectedEvent, setSelectedEvent] = useState<InterviewEvent | null>(
     null
   );
+  const [errorAlertOpen, setErrorAlertOpen] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
+  const [successAlertOpen, setSuccessAlertOpen] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
   const { user } = useAuth();
   const userRole = user?.role ?? "viewer";
   const auditContext = user
@@ -85,9 +91,12 @@ export function EventsPage() {
       );
       await loadEvents();
       setMarkAttendanceDialogOpen(false);
+      setSuccessMessage("Attendance marked successfully");
+      setSuccessAlertOpen(true);
     } catch (error) {
       console.error("Failed to update attendance:", error);
-      alert("Failed to update attendance");
+      setErrorMessage("Failed to update attendance");
+      setErrorAlertOpen(true);
     }
   };
 
@@ -95,7 +104,8 @@ export function EventsPage() {
     try {
       if (type === "events") {
         if (events.length === 0) {
-          alert("No interview events available to export.");
+          setErrorMessage("No interview events available to export.");
+          setErrorAlertOpen(true);
           return;
         }
         await exportEventsCsv(events);
@@ -105,7 +115,8 @@ export function EventsPage() {
       if (type === "interviewers") {
         const roster = await db.getInterviewers();
         if (roster.length === 0) {
-          alert("No interviewers available to export.");
+          setErrorMessage("No interviewers available to export.");
+          setErrorAlertOpen(true);
           return;
         }
         await exportInterviewersCsv(roster);
@@ -115,17 +126,20 @@ export function EventsPage() {
       if (type === "audit_logs") {
         const logs = await db.getAuditLogs();
         if (logs.length === 0) {
-          alert("No audit logs available to export.");
+          setErrorMessage("No audit logs available to export.");
+          setErrorAlertOpen(true);
           return;
         }
         await exportAuditLogsCsv(logs);
         return;
       }
 
-      alert("Unsupported export type selected.");
+      setErrorMessage("Unsupported export type selected.");
+      setErrorAlertOpen(true);
     } catch (error) {
       console.error("Failed to export data:", error);
-      alert("Failed to export data. Please try again.");
+      setErrorMessage("Failed to export data. Please try again.");
+      setErrorAlertOpen(true);
     }
   };
 
@@ -239,6 +253,20 @@ export function EventsPage() {
         onOpenChange={setExportDialogOpen}
         userRole={userRole}
         onExport={handleExport}
+      />
+
+      {/* Accessible Error Alert */}
+      <ErrorAlert
+        open={errorAlertOpen}
+        onOpenChange={setErrorAlertOpen}
+        message={errorMessage}
+      />
+
+      {/* Accessible Success Alert */}
+      <SuccessAlert
+        open={successAlertOpen}
+        onOpenChange={setSuccessAlertOpen}
+        message={successMessage}
       />
     </div>
   );
