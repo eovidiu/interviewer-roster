@@ -22,7 +22,18 @@ if (!window.matchMedia) {
 beforeEach(async () => {
   localStorage.clear();
   sessionStorage.clear();
-  await db.resetDatabase();
+  // Skip database reset when using API (API backend manages its own state)
+  // Only reset if using localStorage-based database service
+  if (typeof db.resetDatabase === 'function') {
+    try {
+      await db.resetDatabase();
+    } catch (error) {
+      // Ignore reset errors when using API service
+      if (!error.message?.includes('not supported via API')) {
+        throw error;
+      }
+    }
+  }
   localStorage.setItem(
     "auth_user",
     JSON.stringify({
