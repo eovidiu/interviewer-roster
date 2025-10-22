@@ -17,6 +17,7 @@ import {
   LogOutIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
+  UserCogIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -85,6 +86,12 @@ export function DashboardLayout({
       href: "/audit-logs",
       icon: FileTextIcon,
       roles: ["admin"], // TA: No access
+    },
+    {
+      name: "User Management",
+      href: "/users",
+      icon: UserCogIcon,
+      roles: ["admin"], // Only admins can manage users
     },
     {
       name: "Settings",
