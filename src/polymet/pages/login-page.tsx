@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { RoleBadge } from "@/polymet/components/role-badge";
+import { GoogleSignInButton } from "@/polymet/components/google-sign-in-button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { CalendarIcon, UserIcon, AlertCircleIcon } from "lucide-react";
 import { useState } from "react";
@@ -110,6 +111,21 @@ export function LoginPage() {
             </Alert>
           )}
 
+          {/* Google OAuth Sign In (Issue #55) */}
+          <div className="space-y-3">
+            <GoogleSignInButton />
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-background px-2 text-muted-foreground">
+                  Or continue with demo accounts
+                </span>
+              </div>
+            </div>
+          </div>
+
           <form onSubmit={(e) => { e.preventDefault(); }}>
             <div className="space-y-3">
               {demoUsers.map((demoUser) => (
@@ -140,8 +156,7 @@ export function LoginPage() {
           </form>
 
           <div className="text-center text-xs text-muted-foreground pt-4 border-t">
-            In production, this would use Google OAuth. For demo purposes, select a
-            user above.
+            Click "Sign in with Google" for production OAuth, or select a demo account for testing.
           </div>
         </CardContent>
       </Card>

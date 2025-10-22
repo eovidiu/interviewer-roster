@@ -1,6 +1,8 @@
 import { useState, useEffect, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import { KpiMetricCard } from "@/polymet/components/kpi-metric-card";
 import { StatusBadge } from "@/polymet/components/status-badge";
+import { AddInterviewerDialog } from "@/polymet/components/add-interviewer-dialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -18,12 +20,17 @@ import type { Interviewer } from "@/polymet/data/mock-interviewers-data";
 
 export function DashboardPage() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [interviewEvents, setInterviewEvents] = useState<InterviewEvent[]>([]);
   const [interviewers, setInterviewers] = useState<Interviewer[]>([]);
   const [loading, setLoading] = useState(true);
+  const [addDialogOpen, setAddDialogOpen] = useState(false);
 
   const userRole = user?.role ?? "viewer";
   const canAddInterviewer = userRole === "admin" || userRole === "talent";
+  const auditContext = user
+    ? { userEmail: user.email, userName: user.name }
+    : undefined;
 
   useEffect(() => {
     loadData();
@@ -42,6 +49,19 @@ export function DashboardPage() {
       console.error("Failed to load dashboard data:", error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleAddInterviewer = async (data: Partial<Interviewer>) => {
+    try {
+      await db.createInterviewer(
+        data as Omit<Interviewer, "id" | "created_at" | "updated_at">,
+        auditContext
+      );
+      await loadData(); // Reload data to show new interviewer
+      setAddDialogOpen(false);
+    } catch (error) {
+      console.error("Failed to add interviewer:", error);
     }
   };
 
@@ -266,11 +286,18 @@ export function DashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Button className="w-full">
+              <Button
+                className="w-full"
+                onClick={() => setAddDialogOpen(true)}
+              >
                 <UsersIcon className="h-4 w-4 mr-2" />
                 Add Interviewer
               </Button>
-              <Button variant="outline" className="w-full">
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={() => navigate('/audit-logs')}
+              >
                 <ActivityIcon className="h-4 w-4 mr-2" />
                 View Reports
               </Button>
@@ -278,6 +305,14 @@ export function DashboardPage() {
           </CardContent>
         </Card>
       )}
+
+      {/* Add Interviewer Dialog */}
+      <AddInterviewerDialog
+        open={addDialogOpen}
+        onOpenChange={setAddDialogOpen}
+        userRole={userRole}
+        onSubmit={handleAddInterviewer}
+      />
     </div>
   );
 }
