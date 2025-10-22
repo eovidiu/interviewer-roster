@@ -58,6 +58,36 @@ const mockAuditLogs = [
   },
 ]
 
+const mockUsers = [
+  {
+    id: '1',
+    name: 'John Doe',
+    email: 'john@example.com',
+    role: 'admin',
+    picture: null,
+    last_login_at: '2024-01-15T10:30:00Z',
+    created_at: '2024-01-01T00:00:00Z',
+  },
+  {
+    id: '2',
+    name: 'Jane Smith',
+    email: 'jane@example.com',
+    role: 'talent',
+    picture: null,
+    last_login_at: '2024-01-14T14:20:00Z',
+    created_at: '2024-01-02T00:00:00Z',
+  },
+  {
+    id: '3',
+    name: 'Bob Wilson',
+    email: 'bob@example.com',
+    role: 'viewer',
+    picture: null,
+    last_login_at: null,
+    created_at: '2024-01-03T00:00:00Z',
+  },
+]
+
 export const handlers = [
   // Auth endpoints
   http.post(`${API_URL}/api/auth/login`, async ({ request }) => {
@@ -185,6 +215,36 @@ export const handlers = [
         offset: 0,
         hasMore: false,
       },
+    })
+  }),
+
+  // Users endpoints (Issue #54)
+  http.get(`${API_URL}/api/users`, () => {
+    return HttpResponse.json({
+      users: mockUsers,
+      total: mockUsers.length,
+      hasMore: false,
+    })
+  }),
+
+  http.patch(`${API_URL}/api/users/:email/role`, async ({ params, request }) => {
+    const { email } = params
+    const body = await request.json() as { role: string }
+
+    const user = mockUsers.find(u => u.email === email)
+    if (!user) {
+      return HttpResponse.json(
+        { error: 'User not found' },
+        { status: 404 }
+      )
+    }
+
+    // Update the mock user's role
+    user.role = body.role as 'viewer' | 'talent' | 'admin'
+
+    return HttpResponse.json({
+      ...user,
+      updated_at: new Date().toISOString(),
     })
   }),
 ]

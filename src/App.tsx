@@ -20,6 +20,7 @@ const MarkInterviewsPage = lazy(() => import("@/polymet/pages/mark-interviews-pa
 const SettingsPage = lazy(() => import("@/polymet/pages/settings-page").then(module => ({ default: module.SettingsPage })));
 const DatabaseManagementPage = lazy(() => import("@/polymet/pages/database-management-page").then(module => ({ default: module.DatabaseManagementPage })));
 const AuditLogsPage = lazy(() => import("@/polymet/pages/audit-logs-page").then(module => ({ default: module.AuditLogsPage })));
+const UserManagementPage = lazy(() => import("@/polymet/pages/user-management-page").then(module => ({ default: module.UserManagementPage })));
 const LoginPage = lazy(() => import("@/polymet/pages/login-page").then(module => ({ default: module.LoginPage })));
 
 type Role = "viewer" | "talent" | "admin";
@@ -159,6 +160,17 @@ export default function InterviewRosterApp() {
               <ProtectedRoute allowedRoles={["admin"]}>
                 <DashboardLayout>
                   <AuditLogsPage />
+                </DashboardLayout>
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/users"
+            element={
+              <ProtectedRoute allowedRoles={["admin"]}>
+                <DashboardLayout>
+                  <UserManagementPage />
                 </DashboardLayout>
               </ProtectedRoute>
             }
