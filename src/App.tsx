@@ -22,6 +22,7 @@ const DatabaseManagementPage = lazy(() => import("@/polymet/pages/database-manag
 const AuditLogsPage = lazy(() => import("@/polymet/pages/audit-logs-page").then(module => ({ default: module.AuditLogsPage })));
 const UserManagementPage = lazy(() => import("@/polymet/pages/user-management-page").then(module => ({ default: module.UserManagementPage })));
 const LoginPage = lazy(() => import("@/polymet/pages/login-page").then(module => ({ default: module.LoginPage })));
+const AuthCallbackPage = lazy(() => import("@/polymet/pages/auth-callback-page").then(module => ({ default: module.AuthCallbackPage })));
 
 type Role = "viewer" | "talent" | "admin";
 
@@ -77,6 +78,7 @@ export default function InterviewRosterApp() {
           <Suspense fallback={<RouteLoading />}>
             <Routes>
           <Route path="/login" element={<LoginPage />} />
+          <Route path="/auth/callback" element={<AuthCallbackPage />} />
 
           <Route
             path="/"

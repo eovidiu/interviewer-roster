@@ -18,6 +18,7 @@ interface AuthContextType {
   user: User | null;
   isLoading: boolean;
   signIn: (email?: string, name?: string) => Promise<void>;
+  signInWithToken: (token: string) => void;
   signOut: () => void;
   token: string | null;
 }
@@ -99,6 +100,33 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   };
 
+  const signInWithToken = (jwtToken: string) => {
+    try {
+      // Decode JWT to get user info (Issue #55)
+      // JWT format: header.payload.signature
+      const payload = JSON.parse(atob(jwtToken.split('.')[1]));
+
+      // Store token in memory (NOT localStorage for security - see Issue #24)
+      setToken(jwtToken);
+
+      // Set token in API client for all future requests
+      apiClient.setToken(jwtToken);
+
+      // Store user info from JWT payload
+      setUser({
+        email: payload.email,
+        name: payload.name,
+        role: payload.role,
+        picture: payload.picture,
+      });
+
+      console.log('✅ Logged in successfully with OAuth token');
+    } catch (error) {
+      console.error('Failed to decode JWT token:', error);
+      throw error;
+    }
+  };
+
   const signOut = () => {
     setUser(null);
     setToken(null);
@@ -110,7 +138,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, isLoading, signIn, signOut, token }}>
+    <AuthContext.Provider value={{ user, isLoading, signIn, signInWithToken, signOut, token }}>
       {children}
     </AuthContext.Provider>
   );

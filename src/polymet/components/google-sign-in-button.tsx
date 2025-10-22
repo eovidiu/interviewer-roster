@@ -1,22 +1,22 @@
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/polymet/data/auth-context";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 
 interface GoogleSignInButtonProps {
   onSuccess?: () => void;
 }
 
 export function GoogleSignInButton({ onSuccess }: GoogleSignInButtonProps) {
-  const { signIn, user } = useAuth();
+  const { user } = useAuth();
+  const location = useLocation();
 
   const handleSignIn = () => {
-    // In a real app, this would trigger Google OAuth flow
-    // For now, it uses the mock authentication from the context
-    signIn();
-    if (onSuccess) {
-      // Use setTimeout to avoid calling onSuccess in the same render cycle
-      setTimeout(onSuccess, 0);
-    }
+    // Get the return URL from location state or default to /
+    const returnUrl = (location.state as { from?: { pathname: string } })?.from?.pathname || '/';
+
+    // Redirect to backend Google OAuth endpoint (Issue #55)
+    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+    window.location.href = `${apiUrl}/api/auth/google?returnUrl=${encodeURIComponent(returnUrl)}`;
   };
 
   // If user is already signed in, show link to dashboard
