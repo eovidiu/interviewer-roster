@@ -128,12 +128,7 @@ export function SchedulePage() {
     return eventDate >= lastWeekStart && eventDate <= lastWeekEnd;
   });
 
-  const lastWeekInterviewers = new Set(
-    lastWeekEvents.map((event) => event.interviewer_email)
-  );
-
   const totalInterviewsLastWeek = lastWeekEvents.length;
-  const activeInterviewersLastWeek = lastWeekInterviewers.size;
 
   // Calculate this week's total interviews (current Monday-Sunday)
   const thisWeekStart = new Date(now);

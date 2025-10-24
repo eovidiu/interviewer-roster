@@ -2,11 +2,7 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/polymet/data/auth-context";
 import { Link, useLocation } from "react-router-dom";
 
-interface GoogleSignInButtonProps {
-  onSuccess?: () => void;
-}
-
-export function GoogleSignInButton({ onSuccess }: GoogleSignInButtonProps) {
+export function GoogleSignInButton() {
   const { user } = useAuth();
   const location = useLocation();
 

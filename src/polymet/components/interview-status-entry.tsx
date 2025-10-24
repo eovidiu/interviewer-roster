@@ -29,12 +29,10 @@ export function InterviewStatusEntry({
   disabled = false,
 }: InterviewStatusEntryProps) {
   const [time, setTime] = useState(extractTimeFromISO(event.start_time));
-  const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
   const handleTimeBlur = async () => {
-    setIsEditing(false);
 
     // If time hasn't changed, do nothing
     const currentTime = extractTimeFromISO(event.start_time);
@@ -82,7 +80,7 @@ export function InterviewStatusEntry({
     try {
       await onStatusChange(event.id, newStatus);
       // Success toast handled by parent component
-    } catch (error) {
+    } catch {
       toast.error("Failed to update status");
     } finally {
       setIsSaving(false);
@@ -98,7 +96,7 @@ export function InterviewStatusEntry({
     try {
       await onDelete(event.id);
       // Success toast handled by parent component
-    } catch (error) {
+    } catch {
       toast.error("Failed to delete entry");
       setIsDeleting(false);
     }
@@ -119,7 +117,6 @@ export function InterviewStatusEntry({
           type="text"
           value={time}
           onChange={(e) => setTime(e.target.value)}
-          onFocus={() => setIsEditing(true)}
           onBlur={handleTimeBlur}
           onKeyDown={handleTimeKeyDown}
           disabled={disabled || isSaving || isDeleting}

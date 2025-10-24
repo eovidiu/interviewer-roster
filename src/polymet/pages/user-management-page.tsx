@@ -151,9 +151,10 @@ export function UserManagementPage() {
       setSuccessMessage(`User ${userToDelete.name} deleted successfully`)
       setIsDeleteDialogOpen(false)
       setUserToDelete(null)
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error deleting user:', err)
-      const errorMessage = err.response?.data?.error || 'Failed to delete user. Please try again.'
+      const error = err as { response?: { data?: { error?: string } } }
+      const errorMessage = error.response?.data?.error || 'Failed to delete user. Please try again.'
       setDeleteError(errorMessage)
     } finally {
       setDeleting(false)

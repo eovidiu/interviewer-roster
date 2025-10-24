@@ -86,10 +86,6 @@ export function ReadOnlyWeeklyCalendar({
     });
   };
 
-  const formatDateString = (date: Date) => {
-    return date.toISOString().split("T")[0];
-  };
-
   // Load events ONLY on initial load or week change
   useEffect(() => {
     const weekString = currentWeekStart.toISOString();
@@ -314,7 +310,6 @@ export function ReadOnlyWeeklyCalendar({
                     </div>
                   </td>
                   {weekDays.map((date, dayIndex) => {
-                    const dateString = formatDateString(date);
                     const dayEvents = filterEventsByDay(
                       localEvents,
                       interviewer.email,

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   mockInterviewers,
   Interviewer,
@@ -26,14 +26,12 @@ import { useAuth } from "@/polymet/data/auth-context";
 interface EditableWeeklyCalendarProps {
   interviewers?: Interviewer[];
   events?: InterviewEvent[];
-  onSave?: (data: Record<string, Record<string, number>>) => void;
   auditContext?: AuditContext;
 }
 
 export function EditableWeeklyCalendar({
   interviewers = mockInterviewers,
   events = mockInterviewEvents,
-  onSave,
   auditContext,
 }: EditableWeeklyCalendarProps) {
   const [currentWeekStart, setCurrentWeekStart] = useState(() => {
@@ -53,7 +51,6 @@ export function EditableWeeklyCalendar({
   // Local state for events - load fresh data when needed
   const [localEvents, setLocalEvents] = useState<InterviewEvent[]>(events);
 
-  const [isSaving, setIsSaving] = useState(false);
   const [addingCell, setAddingCell] = useState<string | null>(null); // Track which cell is adding
   const [lastSynced, setLastSynced] = useState<Date | null>(null);
   const [searchQuery, setSearchQuery] = useState<string>("");
@@ -87,14 +84,6 @@ export function EditableWeeklyCalendar({
       );
     });
   };
-
-  // Get events for a specific interviewer and date (for use during saves)
-  const getEventsForDay = useCallback(
-    (interviewerEmail: string, date: Date) => {
-      return filterEventsByDay(localEvents, interviewerEmail, date);
-    },
-    [localEvents]
-  );
 
   // Format date for display
   const formatDate = (date: Date) => {
