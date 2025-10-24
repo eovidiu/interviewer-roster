@@ -6,7 +6,7 @@ import routes from './routes.js'
  * @param {import('fastify').FastifyInstance} fastify
  * @param {Object} options
  */
-export default async function interviewersPlugin(fastify, options) {
+export default async function interviewersPlugin(fastify, _options) {
   // Create service instance
   const service = new InterviewerService(fastify.db, fastify.auditLogger)
 

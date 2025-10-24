@@ -14,7 +14,7 @@ import routes from './routes.js'
  * - fastify.authenticate (JWT auth)
  * - fastify.authorize (role-based auth)
  */
-export default async function eventsPlugin(fastify, options) {
+export default async function eventsPlugin(fastify, _options) {
   // Create service instance with dependencies
   const service = new EventService(fastify.db, fastify.auditLogger)
 

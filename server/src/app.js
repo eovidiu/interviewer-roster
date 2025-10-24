@@ -76,7 +76,7 @@ export async function createApp() {
         }
       }
     }
-  }, async (request, reply) => {
+  }, async (_request, _reply) => {
     return {
       status: 'ok',
       timestamp: new Date().toISOString(),

@@ -9,7 +9,7 @@ import config from '../config/index.js'
  * @param {import('fastify').FastifyInstance} fastify
  * @param {Object} options
  */
-async function authPlugin(fastify, options) {
+async function authPlugin(fastify, _options) {
   // Register JWT
   await fastify.register(jwt, {
     secret: config.jwt.secret,

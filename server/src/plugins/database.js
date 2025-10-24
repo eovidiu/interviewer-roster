@@ -1,20 +1,15 @@
 import fp from 'fastify-plugin'
 import Database from 'better-sqlite3'
-import { readFileSync } from 'fs'
-import { join, dirname } from 'path'
-import { fileURLToPath } from 'url'
 import config from '../config/index.js'
-
-const __dirname = dirname(fileURLToPath(import.meta.url))
 
 /**
  * Database plugin using better-sqlite3
  * Provides connection pool and helper methods
  *
  * @param {import('fastify').FastifyInstance} fastify
- * @param {Object} options
+ * @param {Object} _options
  */
-async function databasePlugin(fastify, options) {
+async function databasePlugin(fastify, _options) {
   const db = new Database(config.database.path, {
     verbose: config.isDevelopment ? console.log : null
   })

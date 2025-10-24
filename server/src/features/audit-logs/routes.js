@@ -13,7 +13,7 @@ import {
  * Admin users can see all logs
  * Regular users can only see their own logs
  */
-export default async function auditLogRoutes(fastify, options) {
+export default async function auditLogRoutes(fastify, _options) {
   const service = options.service
 
   /**
@@ -43,7 +43,7 @@ export default async function auditLogRoutes(fastify, options) {
       },
       preHandler: fastify.authenticate
     },
-    async (request, reply) => {
+    async (request, _reply) => {
       const filters = { ...request.query }
 
       // Non-admin users can only see their own logs
@@ -77,7 +77,7 @@ export default async function auditLogRoutes(fastify, options) {
       },
       preHandler: fastify.authorize(['admin'])
     },
-    async (request, reply) => {
+    async (_request, _reply) => {
       const stats = await service.getStats()
       return stats
     }
@@ -115,7 +115,7 @@ export default async function auditLogRoutes(fastify, options) {
       },
       preHandler: fastify.authorize(['admin'])
     },
-    async (request, reply) => {
+    async (request, _reply) => {
       const limit = request.query.limit || 50
       const logs = await service.getRecent(limit)
       return logs

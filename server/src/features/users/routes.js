@@ -5,7 +5,7 @@
 import { UserRepository } from './repository.js'
 import { UserService } from './service.js'
 
-export default async function userRoutes(fastify, options) {
+export default async function userRoutes(fastify, _options) {
   const userRepository = new UserRepository(fastify.db)
   const userService = new UserService(userRepository, fastify.auditLogger)
 

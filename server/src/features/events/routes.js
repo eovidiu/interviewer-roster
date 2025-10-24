@@ -14,7 +14,7 @@ import {
  * All routes require authentication
  * Create/Update/Delete require admin or talent role
  */
-export default async function eventRoutes(fastify, options) {
+export default async function eventRoutes(fastify, _options) {
   const service = options.service
 
   /**
@@ -43,7 +43,7 @@ export default async function eventRoutes(fastify, options) {
       },
       preHandler: fastify.authenticate
     },
-    async (request, reply) => {
+    async (request, _reply) => {
       const result = await service.list(request.query)
       return result
     }
@@ -70,7 +70,7 @@ export default async function eventRoutes(fastify, options) {
       },
       preHandler: fastify.authenticate
     },
-    async (request, reply) => {
+    async (_request, _reply) => {
       const stats = await service.getStats()
       return stats
     }

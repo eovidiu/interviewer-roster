@@ -6,7 +6,7 @@ import { randomUUID } from 'node:crypto'
 import { OAuth2Client } from 'google-auth-library'
 import { UserRepository } from '../users/repository.js'
 
-export default async function authRoutes(fastify, options) {
+export default async function authRoutes(fastify, _options) {
   const userRepository = new UserRepository(fastify.db)
 
   // Initialize Google OAuth client
@@ -230,7 +230,7 @@ export default async function authRoutes(fastify, options) {
         },
       },
     },
-    async (request, reply) => {
+    async (request, _reply) => {
       const { email, name } = request.body
 
       // Find or create user in database (Issue #53)
@@ -315,7 +315,7 @@ export default async function authRoutes(fastify, options) {
       },
       preHandler: fastify.authenticate,
     },
-    async (request, reply) => {
+    async (request, _reply) => {
       return request.user
     }
   )

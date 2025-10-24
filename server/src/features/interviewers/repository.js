@@ -99,7 +99,7 @@ export class InterviewerRepository {
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     `)
 
-    const result = stmt.run(
+    stmt.run(
       data.id,
       data.name,
       data.email,

@@ -188,10 +188,10 @@ export class EventRepository {
   /**
    * Create new event
    * @param {Object} data - Event data
-   * @param {Object} auditContext - Audit context (user info)
+   * @param {Object} _auditContext - Audit context (user info)
    * @returns {Object} Created event
    */
-  create(data, auditContext = {}) {
+  create(data, _auditContext = {}) {
     // Validate no time conflict exists
     if (data.start_time && data.interviewer_email) {
       const hasConflict = this.checkTimeConflict(data.interviewer_email, data.start_time)
@@ -232,10 +232,10 @@ export class EventRepository {
    * Update existing event
    * @param {string} id - Event ID
    * @param {Object} data - Updated fields
-   * @param {Object} auditContext - Audit context
+   * @param {Object} _auditContext - Audit context
    * @returns {Object} Updated event
    */
-  update(id, data, auditContext = {}) {
+  update(id, data, _auditContext = {}) {
     // Validate time conflict if start_time is being updated
     if (data.start_time !== undefined) {
       const event = this.findById(id)

@@ -9,7 +9,7 @@ import config from '../config/index.js'
  * @param {import('fastify').FastifyInstance} fastify
  * @param {Object} options
  */
-async function swaggerPlugin(fastify, options) {
+async function swaggerPlugin(fastify, _options) {
   if (!config.swagger.enabled) {
     fastify.log.info('Swagger documentation disabled')
     return
