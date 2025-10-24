@@ -9,17 +9,15 @@ import {
 } from "@/polymet/data/mock-interview-events-data";
 import { db } from "@/polymet/data/database-service";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   ChevronLeftIcon,
   ChevronRightIcon,
   CalendarIcon,
+  SaveIcon,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import type { AuditContext } from "@/polymet/data/database-service";
-import { InterviewDayCell } from "./interview-day-cell";
-import { createISOFromTime, createEndTime, isDuplicateTime } from "@/lib/time-utils";
-import { toast } from "sonner";
-import { useAuth } from "@/polymet/data/auth-context";
 
 interface EditableWeeklyCalendarProps {
   interviewers?: Interviewer[];
@@ -44,16 +42,18 @@ export function EditableWeeklyCalendar({
     return monday;
   });
 
-  // Get current user for role-based access
-  const { user } = useAuth();
-  const canEdit = user?.role === 'talent' || user?.role === 'admin';
+  // State to store interview counts: { interviewerEmail: { dateString: count } }
+  const [interviewCounts, setInterviewCounts] = useState<
+    Record<string, Record<string, number>>
+  >({});
 
   // Local state for events - load fresh data when needed
   const [localEvents, setLocalEvents] = useState<InterviewEvent[]>(events);
 
+  const [hasChanges, setHasChanges] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [addingCell, setAddingCell] = useState<string | null>(null); // Track which cell is adding
   const [lastSynced, setLastSynced] = useState<Date | null>(null);
+  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const initializedRef = useRef(false);
   const currentWeekRef = useRef(currentWeekStart.toISOString());
 
@@ -105,29 +105,54 @@ export function EditableWeeklyCalendar({
     return date.toISOString().split("T")[0];
   };
 
-  // Load events ONLY on initial load or week change
+  // Load events and calculate counts ONLY on initial load or week change
+  // Do NOT recalculate when localEvents changes (which happens during async loads)
   useEffect(() => {
     const weekString = currentWeekStart.toISOString();
     const weekChanged = currentWeekRef.current !== weekString;
 
-    // Only reload if:
+    // Only reload and recalculate if:
     // 1. First time loading (not initialized)
     // 2. Week changed
     if (!initializedRef.current || weekChanged) {
-      const loadEvents = async () => {
+      const loadAndCalculate = async () => {
         try {
           // Load fresh events from database
           const freshEvents = await db.getInterviewEvents();
+
+          // Calculate counts from fresh events
+          const counts: Record<string, Record<string, number>> = {};
+          const days = Array.from({ length: 5 }, (_, i) => {
+            const date = new Date(currentWeekStart);
+            date.setDate(currentWeekStart.getDate() + i);
+            return date;
+          });
+
+          interviewers.forEach((interviewer) => {
+            counts[interviewer.email] = {};
+            days.forEach((date) => {
+              const dateString = formatDateString(date);
+              const dayEvents = filterEventsByDay(
+                freshEvents,
+                interviewer.email,
+                date
+              );
+              counts[interviewer.email][dateString] = dayEvents.length;
+            });
+          });
+
+          // Update state with fresh data
           setLocalEvents(freshEvents);
+          setInterviewCounts(counts);
+          setHasChanges(false);
           initializedRef.current = true;
           currentWeekRef.current = weekString;
         } catch (error) {
           console.error("Failed to load events:", error);
-          toast.error("Failed to load interview data");
         }
       };
 
-      loadEvents();
+      loadAndCalculate();
     }
   }, [currentWeekStart, interviewers]);
 
@@ -169,120 +194,125 @@ export function EditableWeeklyCalendar({
     );
   };
 
-  // Add new interview entry (defaults: 09:00, status: pending, 1 hour duration)
-  const handleAddEntry = async (interviewerEmail: string, date: Date) => {
-    const cellKey = `${interviewerEmail}-${formatDateString(date)}`;
-    setAddingCell(cellKey);
+  // Handle input change
+  const handleCountChange = async (
+    interviewerEmail: string,
+    dateString: string,
+    value: string
+  ) => {
+    const numValue = value === "" ? 0 : parseInt(value, 10);
+    if (isNaN(numValue) || numValue < 0) return;
 
-    try {
-      const defaultTime = '09:00';
-      const dayEvents = filterEventsByDay(localEvents, interviewerEmail, date);
+    // Store previous value for rollback on error
+    const previousValue = interviewCounts[interviewerEmail]?.[dateString] || 0;
 
-      // Check for duplicate time
-      if (isDuplicateTime(defaultTime, dayEvents)) {
-        toast.error('This time slot is already booked for this interviewer');
-        return;
-      }
+    // Update UI immediately (optimistic update)
+    setInterviewCounts((prev) => ({
+      ...prev,
+      [interviewerEmail]: {
+        ...prev[interviewerEmail],
+        [dateString]: numValue,
+      },
+    }));
 
-      // Check max capacity
-      if (dayEvents.length >= 3) {
-        toast.error('Maximum 3 interview slots per day');
-        return;
-      }
-
-      const startTime = createISOFromTime(date, defaultTime);
-      const endTime = createEndTime(date, defaultTime, 60);
-
-      const newEvent = await db.createInterviewEvent({
-        interviewer_email: interviewerEmail,
-        start_time: startTime,
-        end_time: endTime,
-        status: 'pending',
-        notes: 'Added via Mark Interviews page',
-        duration_minutes: 60,
-      }, auditContext);
-
-      if (newEvent) {
-        setLocalEvents(prev => [...prev, newEvent]);
-        toast.success('Interview slot added');
-        setLastSynced(new Date());
-      }
-    } catch (error) {
-      console.error('Failed to add interview:', error);
-      toast.error('Failed to add interview slot');
-    } finally {
-      setAddingCell(null);
-    }
+    // Save to database
+    await saveInterviewCount(interviewerEmail, dateString, numValue, previousValue);
   };
 
-  // Update interview time
-  const handleTimeChange = async (eventId: string, newTime: string) => {
+  // Save a single interview count for a specific interviewer and date
+  const saveInterviewCount = async (
+    interviewerEmail: string,
+    dateString: string,
+    targetCount: number,
+    previousValue: number
+  ) => {
     try {
-      const event = localEvents.find(e => e.id === eventId);
-      if (!event) throw new Error('Event not found');
+      setIsSaving(true);
 
-      const date = new Date(event.start_time);
-      const dayEvents = filterEventsByDay(localEvents, event.interviewer_email, date);
+      // Get existing events for this interviewer and date
+      const allEvents = await db.getInterviewEventsByInterviewer(interviewerEmail);
+      const date = new Date(dateString);
+      const dayStart = new Date(date);
+      dayStart.setHours(0, 0, 0, 0);
+      const dayEnd = new Date(date);
+      dayEnd.setHours(23, 59, 59, 999);
 
-      // Check for duplicate time (excluding current event)
-      if (isDuplicateTime(newTime, dayEvents, eventId)) {
-        throw new Error('This time slot is already booked for this interviewer');
+      const existingEvents = allEvents.filter((event) => {
+        const eventDate = new Date(event.start_time);
+        return eventDate >= dayStart && eventDate <= dayEnd;
+      });
+
+      const currentCount = existingEvents.length;
+
+      // Add or remove events to match the count
+      if (targetCount > currentCount) {
+        // Add new events
+        const newEvents: InterviewEvent[] = [];
+        for (let i = 0; i < targetCount - currentCount; i++) {
+          const startTime = new Date(date);
+          startTime.setHours(9 + i, 0, 0, 0);
+
+          const endTime = new Date(startTime);
+          endTime.setMinutes(endTime.getMinutes() + 60);
+
+          const newEvent = await db.createInterviewEvent({
+              interviewer_email: interviewerEmail,
+              candidate_name: `Candidate ${Date.now()}-${i}`,
+              position: "Position TBD",
+              start_time: startTime.toISOString(),
+              end_time: endTime.toISOString(),
+              duration_minutes: 60,
+              status: "pending",
+              notes: "Added via Mark Interviews page",
+            }, auditContext);
+
+          if (newEvent) {
+            newEvents.push(newEvent);
+          }
+        }
+
+        // Update localEvents with newly created events
+        setLocalEvents((prev) => [...prev, ...newEvents]);
+      } else if (targetCount < currentCount) {
+        // Remove excess events (remove pending ones first)
+        const eventsToRemove = existingEvents
+          .sort((a, b) => {
+            if (a.status === "pending" && b.status !== "pending") return -1;
+            if (a.status !== "pending" && b.status === "pending") return 1;
+            return 0;
+          })
+          .slice(0, currentCount - targetCount);
+
+        const removedIds = new Set<string>();
+        for (const event of eventsToRemove) {
+          await db.deleteInterviewEvent(event.id, auditContext);
+          removedIds.add(event.id);
+        }
+
+        // Update localEvents by removing deleted events
+        setLocalEvents((prev) => prev.filter(event => !removedIds.has(event.id)));
       }
 
-      const newStartTime = createISOFromTime(date, newTime);
-      const newEndTime = createEndTime(date, newTime, 60);
-
-      const updatedEvent = await db.updateInterviewEvent(eventId, {
-        start_time: newStartTime,
-        end_time: newEndTime,
-      }, auditContext);
-
-      if (updatedEvent) {
-        setLocalEvents(prev => prev.map(e => e.id === eventId ? updatedEvent : e));
-        setLastSynced(new Date());
-      }
-    } catch (error) {
-      console.error('Failed to update time:', error);
-      throw error; // Re-throw to let component handle UI feedback
-    }
-  };
-
-  // Update interview status
-  const handleStatusChange = async (eventId: string, newStatus: InterviewEvent['status']) => {
-    try {
-      const updatedEvent = await db.updateInterviewEvent(eventId, {
-        status: newStatus,
-        marked_by: auditContext.userEmail,
-        marked_at: new Date().toISOString(),
-      }, auditContext);
-
-      if (updatedEvent) {
-        setLocalEvents(prev => prev.map(e => e.id === eventId ? updatedEvent : e));
-        toast.success(`Status updated to ${newStatus}`);
-        setLastSynced(new Date());
-      }
-    } catch (error) {
-      console.error('Failed to update status:', error);
-      throw error;
-    }
-  };
-
-  // Delete interview entry
-  const handleDelete = async (eventId: string) => {
-    try {
-      await db.deleteInterviewEvent(eventId, auditContext);
-      setLocalEvents(prev => prev.filter(e => e.id !== eventId));
-      toast.success('Interview slot deleted');
       setLastSynced(new Date());
     } catch (error) {
-      console.error('Failed to delete interview:', error);
-      throw error;
+      console.error("Failed to save interview count:", error);
+      // On error, revert the UI state to previous value
+      setInterviewCounts((prev) => ({
+        ...prev,
+        [interviewerEmail]: {
+          ...prev[interviewerEmail],
+          [dateString]: previousValue,
+        },
+      }));
+    } finally {
+      setIsSaving(false);
     }
   };
 
-  // Calculate total interviews for the week per interviewer
+  // Calculate total for the week
   const getWeekTotal = (interviewerEmail: string) => {
-    return localEvents.filter(event => event.interviewer_email === interviewerEmail).length;
+    const counts = interviewCounts[interviewerEmail] || {};
+    return Object.values(counts).reduce((sum, count) => sum + count, 0);
   };
 
   return (
@@ -317,18 +347,13 @@ export function EditableWeeklyCalendar({
         </div>
       </div>
 
-      {/* Status Legend */}
+      {/* Info banner */}
       <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
-        <p className="text-sm text-blue-900 dark:text-blue-100 mb-2">
-          <strong>How to use:</strong> Click the + button to add interview slots. Enter time (HH:MM format, 09:00-20:00) and select status.
+        <p className="text-sm text-blue-900 dark:text-blue-100">
+          <strong>How to mark interviews:</strong> Check the box for days when an interviewer conducted interviews.
+          By default, checking a box counts as 1 interview. Click "2" or "3" to specify multiple interviews for that day.
           Changes save automatically.
         </p>
-        <div className="flex gap-4 text-xs text-blue-800 dark:text-blue-200">
-          <span><strong className="bg-green-500 text-white px-2 py-0.5 rounded">A</strong> = Attended</span>
-          <span><strong className="bg-yellow-500 text-white px-2 py-0.5 rounded">P</strong> = Pending</span>
-          <span><strong className="bg-red-500 text-white px-2 py-0.5 rounded">G</strong> = Ghosted</span>
-          <span><strong className="bg-gray-500 text-white px-2 py-0.5 rounded">C</strong> = Cancelled</span>
-        </div>
       </div>
       {/* Calendar Grid */}
       <div className="border border-border rounded-lg overflow-hidden">
@@ -379,29 +404,61 @@ export function EditableWeeklyCalendar({
                     </td>
                     {weekDays.map((date, dayIndex) => {
                       const dateString = formatDateString(date);
-                      const dayEvents = filterEventsByDay(localEvents, interviewer.email, date);
-                      const cellKey = `${interviewer.email}-${dateString}`;
+                      const count =
+                        interviewCounts[interviewer.email]?.[dateString] || 0;
+                      const isChecked = count > 0;
 
                       return (
                         <td
                           key={dayIndex}
-                          className={`border-r border-border p-0 ${
+                          className={`border-r border-border p-2 text-center ${
                             isToday(date)
                               ? "bg-blue-50/50 dark:bg-blue-950/10"
                               : ""
                           }`}
                         >
-                          <InterviewDayCell
-                            interviewerEmail={interviewer.email}
-                            date={date}
-                            events={dayEvents}
-                            onAddEntry={handleAddEntry}
-                            onTimeChange={handleTimeChange}
-                            onStatusChange={handleStatusChange}
-                            onDelete={handleDelete}
-                            canEdit={canEdit}
-                            isAdding={addingCell === cellKey}
-                          />
+                          <div className="flex flex-col items-center gap-1">
+                            <input
+                              type="checkbox"
+                              checked={isChecked}
+                              onChange={(e) => {
+                                const newValue = e.target.checked ? "1" : "0";
+                                handleCountChange(
+                                  interviewer.email,
+                                  dateString,
+                                  newValue
+                                );
+                              }}
+                              className="h-4 w-4 cursor-pointer"
+                            />
+                            <div className="flex gap-1">
+                              {[1, 2, 3].map((num) => (
+                                <button
+                                  key={num}
+                                  type="button"
+                                  onClick={() => {
+                                    handleCountChange(
+                                      interviewer.email,
+                                      dateString,
+                                      num.toString()
+                                    );
+                                  }}
+                                  disabled={!isChecked}
+                                  className={`
+                                    w-6 h-6 text-xs font-medium rounded
+                                    transition-colors cursor-pointer
+                                    ${isChecked ? 'hover:bg-primary/20' : 'cursor-not-allowed opacity-40'}
+                                    ${count === num && isChecked
+                                      ? 'bg-primary text-primary-foreground'
+                                      : 'bg-muted text-muted-foreground'
+                                    }
+                                  `}
+                                >
+                                  {num}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
                         </td>
                       );
                     })}
