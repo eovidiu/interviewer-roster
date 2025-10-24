@@ -47,10 +47,15 @@ export function EditableWeeklyCalendar({
     Record<string, Record<string, number>>
   >({});
 
+  // Local state for events - load fresh data when needed
+  const [localEvents, setLocalEvents] = useState<InterviewEvent[]>(events);
+
   const [hasChanges, setHasChanges] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [lastSynced, setLastSynced] = useState<Date | null>(null);
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const initializedRef = useRef(false);
+  const currentWeekRef = useRef(currentWeekStart.toISOString());
 
   // Get the 5 weekdays (Mon-Fri)
   const weekDays = Array.from({ length: 5 }, (_, i) => {
@@ -59,24 +64,33 @@ export function EditableWeeklyCalendar({
     return date;
   });
 
-  // Get events for a specific interviewer and date
+  // Helper function to filter events by day (not a hook, so it doesn't cause re-renders)
+  const filterEventsByDay = (
+    allEvents: InterviewEvent[],
+    interviewerEmail: string,
+    date: Date
+  ) => {
+    const dayStart = new Date(date);
+    dayStart.setHours(0, 0, 0, 0);
+    const dayEnd = new Date(date);
+    dayEnd.setHours(23, 59, 59, 999);
+
+    return allEvents.filter((event) => {
+      const eventDate = new Date(event.start_time);
+      return (
+        event.interviewer_email === interviewerEmail &&
+        eventDate >= dayStart &&
+        eventDate <= dayEnd
+      );
+    });
+  };
+
+  // Get events for a specific interviewer and date (for use during saves)
   const getEventsForDay = useCallback(
     (interviewerEmail: string, date: Date) => {
-      const dayStart = new Date(date);
-      dayStart.setHours(0, 0, 0, 0);
-      const dayEnd = new Date(date);
-      dayEnd.setHours(23, 59, 59, 999);
-
-      return events.filter((event) => {
-        const eventDate = new Date(event.start_time);
-        return (
-          event.interviewer_email === interviewerEmail &&
-          eventDate >= dayStart &&
-          eventDate <= dayEnd
-        );
-      });
+      return filterEventsByDay(localEvents, interviewerEmail, date);
     },
-    [events]
+    [localEvents]
   );
 
   // Format date for display
@@ -91,27 +105,56 @@ export function EditableWeeklyCalendar({
     return date.toISOString().split("T")[0];
   };
 
-  // Initialize counts from events
+  // Load events and calculate counts ONLY on initial load or week change
+  // Do NOT recalculate when localEvents changes (which happens during async loads)
   useEffect(() => {
-    const counts: Record<string, Record<string, number>> = {};
-    const days = Array.from({ length: 5 }, (_, i) => {
-      const date = new Date(currentWeekStart);
-      date.setDate(currentWeekStart.getDate() + i);
-      return date;
-    });
+    const weekString = currentWeekStart.toISOString();
+    const weekChanged = currentWeekRef.current !== weekString;
 
-    interviewers.forEach((interviewer) => {
-      counts[interviewer.email] = {};
-      days.forEach((date) => {
-        const dateString = formatDateString(date);
-        const dayEvents = getEventsForDay(interviewer.email, date);
-        counts[interviewer.email][dateString] = dayEvents.length;
-      });
-    });
+    // Only reload and recalculate if:
+    // 1. First time loading (not initialized)
+    // 2. Week changed
+    if (!initializedRef.current || weekChanged) {
+      const loadAndCalculate = async () => {
+        try {
+          // Load fresh events from database
+          const freshEvents = await db.getInterviewEvents();
 
-    setInterviewCounts(counts);
-    setHasChanges(false);
-  }, [currentWeekStart, interviewers, getEventsForDay]);
+          // Calculate counts from fresh events
+          const counts: Record<string, Record<string, number>> = {};
+          const days = Array.from({ length: 5 }, (_, i) => {
+            const date = new Date(currentWeekStart);
+            date.setDate(currentWeekStart.getDate() + i);
+            return date;
+          });
+
+          interviewers.forEach((interviewer) => {
+            counts[interviewer.email] = {};
+            days.forEach((date) => {
+              const dateString = formatDateString(date);
+              const dayEvents = filterEventsByDay(
+                freshEvents,
+                interviewer.email,
+                date
+              );
+              counts[interviewer.email][dateString] = dayEvents.length;
+            });
+          });
+
+          // Update state with fresh data
+          setLocalEvents(freshEvents);
+          setInterviewCounts(counts);
+          setHasChanges(false);
+          initializedRef.current = true;
+          currentWeekRef.current = weekString;
+        } catch (error) {
+          console.error("Failed to load events:", error);
+        }
+      };
+
+      loadAndCalculate();
+    }
+  }, [currentWeekStart, interviewers]);
 
   // Navigate weeks
   const goToPreviousWeek = () => {
@@ -152,7 +195,7 @@ export function EditableWeeklyCalendar({
   };
 
   // Handle input change
-  const handleCountChange = (
+  const handleCountChange = async (
     interviewerEmail: string,
     dateString: string,
     value: string
@@ -160,6 +203,10 @@ export function EditableWeeklyCalendar({
     const numValue = value === "" ? 0 : parseInt(value, 10);
     if (isNaN(numValue) || numValue < 0) return;
 
+    // Store previous value for rollback on error
+    const previousValue = interviewCounts[interviewerEmail]?.[dateString] || 0;
+
+    // Update UI immediately (optimistic update)
     setInterviewCounts((prev) => ({
       ...prev,
       [interviewerEmail]: {
@@ -167,116 +214,99 @@ export function EditableWeeklyCalendar({
         [dateString]: numValue,
       },
     }));
-    setHasChanges(true);
+
+    // Save to database
+    await saveInterviewCount(interviewerEmail, dateString, numValue, previousValue);
   };
 
-  // Auto-save function with debouncing
-  const autoSave = useCallback(async () => {
-    if (!hasChanges) return;
-
+  // Save a single interview count for a specific interviewer and date
+  const saveInterviewCount = async (
+    interviewerEmail: string,
+    dateString: string,
+    targetCount: number,
+    previousValue: number
+  ) => {
     try {
       setIsSaving(true);
 
-      // Save interview counts to database
-      // We'll update events based on the counts
-      for (const [interviewerEmail, dateCounts] of Object.entries(
-        interviewCounts
-      )) {
-        for (const [dateString, count] of Object.entries(dateCounts)) {
-          // Get existing events for this interviewer and date
-          const allEvents =
-            await db.getInterviewEventsByInterviewer(interviewerEmail);
-          const date = new Date(dateString);
-          const dayStart = new Date(date);
-          dayStart.setHours(0, 0, 0, 0);
-          const dayEnd = new Date(date);
-          dayEnd.setHours(23, 59, 59, 999);
+      // Get existing events for this interviewer and date
+      const allEvents = await db.getInterviewEventsByInterviewer(interviewerEmail);
+      const date = new Date(dateString);
+      const dayStart = new Date(date);
+      dayStart.setHours(0, 0, 0, 0);
+      const dayEnd = new Date(date);
+      dayEnd.setHours(23, 59, 59, 999);
 
-          const existingEvents = allEvents.filter((event) => {
-            const eventDate = new Date(event.start_time);
-            return eventDate >= dayStart && eventDate <= dayEnd;
-          });
+      const existingEvents = allEvents.filter((event) => {
+        const eventDate = new Date(event.start_time);
+        return eventDate >= dayStart && eventDate <= dayEnd;
+      });
 
-          const currentCount = existingEvents.length;
-          const targetCount = count;
+      const currentCount = existingEvents.length;
 
-          // Add or remove events to match the count
-          if (targetCount > currentCount) {
-            // Add new events
-            for (let i = 0; i < targetCount - currentCount; i++) {
-              const startTime = new Date(date);
-              startTime.setHours(9 + i, 0, 0, 0);
+      // Add or remove events to match the count
+      if (targetCount > currentCount) {
+        // Add new events
+        const newEvents: InterviewEvent[] = [];
+        for (let i = 0; i < targetCount - currentCount; i++) {
+          const startTime = new Date(date);
+          startTime.setHours(9 + i, 0, 0, 0);
 
-              await db.createInterviewEvent(
-                {
-                  interviewer_email: interviewerEmail,
-                  candidate_name: `Candidate ${Date.now()}-${i}`,
-                  position: "Position TBD",
-                  start_time: startTime.toISOString(),
-                  duration_minutes: 60,
-                  status: "pending",
-                  notes: "Added via Mark Interviews page",
-                },
-                auditContext
-              );
-            }
-          } else if (targetCount < currentCount) {
-            // Remove excess events (remove pending ones first)
-            const eventsToRemove = existingEvents
-              .sort((a, b) => {
-                if (a.status === "pending" && b.status !== "pending") return -1;
-                if (a.status !== "pending" && b.status === "pending") return 1;
-                return 0;
-              })
-              .slice(0, currentCount - targetCount);
+          const endTime = new Date(startTime);
+          endTime.setMinutes(endTime.getMinutes() + 60);
 
-            for (const event of eventsToRemove) {
-              await db.deleteInterviewEvent(event.id, auditContext);
-            }
+          const newEvent = await db.createInterviewEvent({
+              interviewer_email: interviewerEmail,
+              candidate_name: `Candidate ${Date.now()}-${i}`,
+              position: "Position TBD",
+              start_time: startTime.toISOString(),
+              end_time: endTime.toISOString(),
+              duration_minutes: 60,
+              status: "pending",
+              notes: "Added via Mark Interviews page",
+            }, auditContext);
+
+          if (newEvent) {
+            newEvents.push(newEvent);
           }
         }
+
+        // Update localEvents with newly created events
+        setLocalEvents((prev) => [...prev, ...newEvents]);
+      } else if (targetCount < currentCount) {
+        // Remove excess events (remove pending ones first)
+        const eventsToRemove = existingEvents
+          .sort((a, b) => {
+            if (a.status === "pending" && b.status !== "pending") return -1;
+            if (a.status !== "pending" && b.status === "pending") return 1;
+            return 0;
+          })
+          .slice(0, currentCount - targetCount);
+
+        const removedIds = new Set<string>();
+        for (const event of eventsToRemove) {
+          await db.deleteInterviewEvent(event.id, auditContext);
+          removedIds.add(event.id);
+        }
+
+        // Update localEvents by removing deleted events
+        setLocalEvents((prev) => prev.filter(event => !removedIds.has(event.id)));
       }
 
       setLastSynced(new Date());
-      setHasChanges(false);
-
-      if (onSave) {
-        onSave(interviewCounts);
-      }
     } catch (error) {
-      console.error("Failed to auto-save:", error);
+      console.error("Failed to save interview count:", error);
+      // On error, revert the UI state to previous value
+      setInterviewCounts((prev) => ({
+        ...prev,
+        [interviewerEmail]: {
+          ...prev[interviewerEmail],
+          [dateString]: previousValue,
+        },
+      }));
     } finally {
       setIsSaving(false);
     }
-  }, [interviewCounts, hasChanges, onSave, auditContext]);
-
-  // Debounced auto-save effect
-  useEffect(() => {
-    if (hasChanges) {
-      // Clear existing timeout
-      if (saveTimeoutRef.current) {
-        clearTimeout(saveTimeoutRef.current);
-      }
-
-      // Set new timeout for auto-save (2 seconds after last change)
-      saveTimeoutRef.current = setTimeout(() => {
-        autoSave();
-      }, 2000);
-    }
-
-    return () => {
-      if (saveTimeoutRef.current) {
-        clearTimeout(saveTimeoutRef.current);
-      }
-    };
-  }, [hasChanges, autoSave]);
-
-  // Handle manual save
-  const handleSave = () => {
-    if (saveTimeoutRef.current) {
-      clearTimeout(saveTimeoutRef.current);
-    }
-    autoSave();
   };
 
   // Calculate total for the week
@@ -314,23 +344,17 @@ export function EditableWeeklyCalendar({
           <Button variant="outline" size="icon" onClick={goToNextWeek}>
             <ChevronRightIcon className="h-4 w-4" />
           </Button>
-          {hasChanges && (
-            <Button onClick={handleSave} className="gap-2" disabled={isSaving}>
-              <SaveIcon className="h-4 w-4" />
-              Save Changes
-            </Button>
-          )}
         </div>
       </div>
 
       {/* Info banner */}
       <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
         <p className="text-sm text-blue-900 dark:text-blue-100">
-          Enter the number of interviews conducted by each interviewer for each
-          day. Changes are highlighted and can be saved.
+          <strong>How to mark interviews:</strong> Check the box for days when an interviewer conducted interviews.
+          By default, checking a box counts as 1 interview. Click "2" or "3" to specify multiple interviews for that day.
+          Changes save automatically.
         </p>
       </div>
-
       {/* Calendar Grid */}
       <div className="border border-border rounded-lg overflow-hidden">
         <div className="overflow-x-auto">
@@ -382,6 +406,8 @@ export function EditableWeeklyCalendar({
                       const dateString = formatDateString(date);
                       const count =
                         interviewCounts[interviewer.email]?.[dateString] || 0;
+                      const isChecked = count > 0;
+
                       return (
                         <td
                           key={dayIndex}
@@ -391,19 +417,48 @@ export function EditableWeeklyCalendar({
                               : ""
                           }`}
                         >
-                          <Input
-                            type="number"
-                            min="0"
-                            value={count}
-                            onChange={(e) =>
-                              handleCountChange(
-                                interviewer.email,
-                                dateString,
-                                e.target.value
-                              )
-                            }
-                            className="w-16 h-9 text-center mx-auto"
-                          />
+                          <div className="flex flex-col items-center gap-1">
+                            <input
+                              type="checkbox"
+                              checked={isChecked}
+                              onChange={(e) => {
+                                const newValue = e.target.checked ? "1" : "0";
+                                handleCountChange(
+                                  interviewer.email,
+                                  dateString,
+                                  newValue
+                                );
+                              }}
+                              className="h-4 w-4 cursor-pointer"
+                            />
+                            <div className="flex gap-1">
+                              {[1, 2, 3].map((num) => (
+                                <button
+                                  key={num}
+                                  type="button"
+                                  onClick={() => {
+                                    handleCountChange(
+                                      interviewer.email,
+                                      dateString,
+                                      num.toString()
+                                    );
+                                  }}
+                                  disabled={!isChecked}
+                                  className={`
+                                    w-6 h-6 text-xs font-medium rounded
+                                    transition-colors cursor-pointer
+                                    ${isChecked ? 'hover:bg-primary/20' : 'cursor-not-allowed opacity-40'}
+                                    ${count === num && isChecked
+                                      ? 'bg-primary text-primary-foreground'
+                                      : 'bg-muted text-muted-foreground'
+                                    }
+                                  `}
+                                >
+                                  {num}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
                         </td>
                       );
                     })}
@@ -425,11 +480,6 @@ export function EditableWeeklyCalendar({
           Showing {interviewers.filter((i) => i.is_active).length} active
           interviewers
         </span>
-        {hasChanges && (
-          <span className="text-orange-600 dark:text-orange-400 font-medium">
-            You have unsaved changes
-          </span>
-        )}
       </div>
     </div>
   );

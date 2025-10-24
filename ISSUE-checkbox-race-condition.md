@@ -7,7 +7,7 @@ Bug - Race Condition
 High
 
 ## Status
-In Progress
+✅ RESOLVED - 2025-10-23
 
 ## Description
 
@@ -70,8 +70,8 @@ Race condition between:
 - Added `previousValue` tracking for error rollback
 **Result**: ❌ Still flickering - isSaving flag not effectively blocking useEffect
 
-### Attempt 5: Separate Local State (CURRENT)
-**Date**: Latest attempt
+### Attempt 5: Separate Local State
+**Date**: Initial implementation
 **Problem**: useEffect recalculates whenever events prop changes
 **Solution**:
 - Added `localEvents` state separate from parent prop
@@ -80,7 +80,40 @@ Race condition between:
 - Load fresh events from database in useEffect
 - Remove dependency on parent `events` prop changes
 - Created `filterEventsByDay` helper function (not a hook)
-**Result**: 🔄 IN TESTING
+**Result**: ❌ Still flickering - localEvents not updated after saves
+
+### Attempt 6: Update Local State After Saves (FINAL SOLUTION) ✅
+**Date**: 2025-10-23
+**Problem**: `localEvents` state was never updated after save operations, causing stale data
+**Root Cause Identified**:
+- Optimistic UI update works (checkbox changes)
+- Database saves work correctly
+- BUT `localEvents` state remained stale
+- Any re-render used stale `localEvents` to recalculate counts, overwriting UI
+
+**Solution**:
+Updated `saveInterviewCount` function to maintain `localEvents` in sync with database:
+1. **When adding events**: Collect newly created events and append to `localEvents`
+   ```typescript
+   const newEvents: InterviewEvent[] = [];
+   for (...) {
+     const newEvent = await db.createInterviewEvent(...);
+     if (newEvent) newEvents.push(newEvent);
+   }
+   setLocalEvents((prev) => [...prev, ...newEvents]);
+   ```
+
+2. **When removing events**: Track deleted IDs and filter them out of `localEvents`
+   ```typescript
+   const removedIds = new Set<string>();
+   for (const event of eventsToRemove) {
+     await db.deleteInterviewEvent(event.id, auditContext);
+     removedIds.add(event.id);
+   }
+   setLocalEvents((prev) => prev.filter(event => !removedIds.has(event.id)));
+   ```
+
+**Result**: ✅ **SOLVED** - Checkboxes work perfectly without flicker, state persists correctly
 
 ## Code Changes
 
@@ -266,4 +299,31 @@ Use React Query to manage server state separately from UI state with built-in ca
 2025-10-22
 
 ## Last Updated
-2025-10-22
+2025-10-23
+
+## Resolution Summary
+
+### What Was Fixed
+The race condition was caused by `localEvents` state not being updated after save operations. The component maintained two pieces of state:
+1. `interviewCounts` - UI display state (updated optimistically)
+2. `localEvents` - Source of truth for event data (was NOT being updated)
+
+When saves completed, the database was updated correctly, but `localEvents` remained stale. Any subsequent render would recalculate counts from stale data, causing the flicker.
+
+### The Fix
+Updated `/src/polymet/components/editable-weekly-calendar.tsx` (lines 247-294) to synchronize `localEvents` with database operations:
+- After creating events → append to `localEvents`
+- After deleting events → filter out from `localEvents`
+
+### Why It Works Now
+1. ✅ User clicks → `interviewCounts` updates immediately (no delay)
+2. ✅ Save happens → database AND `localEvents` both update
+3. ✅ `getEventsForDay` uses current `localEvents` (not stale)
+4. ✅ useEffect only runs on mount/week change (not during saves)
+5. ✅ UI stays synchronized with data at all times
+
+### Testing Verification
+- Checkboxes remain checked after clicking (no flicker)
+- Counts persist across page reloads
+- Week navigation loads correct data
+- Multiple rapid clicks handled correctly
