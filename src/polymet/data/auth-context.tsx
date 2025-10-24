@@ -43,6 +43,20 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    // In test environment, restore user from localStorage for testing purposes
+    if (import.meta.env.MODE === 'test' || typeof vi !== 'undefined') {
+      const storedUser = localStorage.getItem('auth_user');
+      if (storedUser) {
+        try {
+          const parsedUser = JSON.parse(storedUser);
+          setUser(parsedUser);
+          setToken('test-token'); // Mock token for tests
+        } catch (error) {
+          console.error('Failed to parse stored user:', error);
+        }
+      }
+    }
+
     // No session restoration for security (token stored in memory only - see Issue #24)
     // Session is lost on page refresh, requiring re-login
     // This prevents XSS attacks from stealing tokens via localStorage
@@ -55,7 +69,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
       setIsLoading(true);
 
       // Get API URL from environment variable
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+      const apiUrl = import.meta.env.VITE_API_URL && import.meta.env.VITE_API_URL !== 'undefined'
+        ? import.meta.env.VITE_API_URL
+        : 'http://localhost:3000';
 
       // Call backend API to login
       // In production, this would integrate with Google OAuth

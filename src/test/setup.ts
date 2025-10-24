@@ -20,6 +20,14 @@ if (!window.matchMedia) {
   });
 }
 
+// Mock hasPointerCapture and scrollIntoView for Radix UI compatibility
+if (typeof Element !== 'undefined') {
+  Element.prototype.hasPointerCapture = Element.prototype.hasPointerCapture || vi.fn().mockReturnValue(false);
+  Element.prototype.setPointerCapture = Element.prototype.setPointerCapture || vi.fn();
+  Element.prototype.releasePointerCapture = Element.prototype.releasePointerCapture || vi.fn();
+  Element.prototype.scrollIntoView = Element.prototype.scrollIntoView || vi.fn();
+}
+
 // Start MSW server before all tests
 beforeAll(() => {
   server.listen({ onUnhandledRequest: 'error' });

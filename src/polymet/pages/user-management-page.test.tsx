@@ -75,7 +75,7 @@ describe('Issue #54: User Management Page', () => {
       // Should have table headers
       expect(screen.getByText(/name/i)).toBeInTheDocument()
       expect(screen.getByText(/email/i)).toBeInTheDocument()
-      expect(screen.getByText(/role/i)).toBeInTheDocument()
+      expect(screen.getByRole('columnheader', { name: /role/i })).toBeInTheDocument()
     })
 
     it('should display users from API', async () => {

@@ -47,9 +47,9 @@ describe('Issue #21: Browser alert() and confirm() usage', () => {
       expect(screen.getByText('John Doe')).toBeInTheDocument();
     });
 
-    // Try to delete an interviewer
-    const actionsButton = screen.getByLabelText('Open actions menu');
-    await user.click(actionsButton);
+    // Try to delete an interviewer - use getAllByLabelText since there are multiple action buttons
+    const actionsButtons = screen.getAllByLabelText('Open actions menu');
+    await user.click(actionsButtons[0]);
 
     const deleteButton = screen.getByText('Delete');
     await user.click(deleteButton);
@@ -76,9 +76,9 @@ describe('Issue #21: Browser alert() and confirm() usage', () => {
       expect(screen.getByText('John Doe')).toBeInTheDocument();
     });
 
-    // Try to delete (will fail)
-    const actionsButton = screen.getByLabelText('Open actions menu');
-    await user.click(actionsButton);
+    // Try to delete (will fail) - use getAllByLabelText since there are multiple action buttons
+    const actionsButtons = screen.getAllByLabelText('Open actions menu');
+    await user.click(actionsButtons[0]);
 
     const deleteButton = screen.getByText('Delete');
 
@@ -98,6 +98,7 @@ describe('Issue #21: Browser alert() and confirm() usage', () => {
   });
 
   it('should use accessible AlertDialog component instead of confirm()', async () => {
+    const user = userEvent.setup();
     renderInterviewersPage();
 
     await waitFor(() => {
@@ -106,11 +107,11 @@ describe('Issue #21: Browser alert() and confirm() usage', () => {
 
     // This test documents the expected behavior
     // It will fail initially because AlertDialog is not implemented yet
-    const actionsButton = screen.getByLabelText('Open actions menu');
-    await userEvent.setup().click(actionsButton);
+    const actionsButtons = screen.getAllByLabelText('Open actions menu');
+    await user.click(actionsButtons[0]);
 
     const deleteButton = screen.getByText('Delete');
-    await userEvent.setup().click(deleteButton);
+    await user.click(deleteButton);
 
     // Should show AlertDialog with proper ARIA attributes
     const dialog = await screen.findByRole('alertdialog');
@@ -183,9 +184,9 @@ describe('Issue #40: Success notifications after mutations', () => {
       expect(screen.getByText('John Doe')).toBeInTheDocument();
     });
 
-    // Open actions menu and click Edit
-    const actionsButton = screen.getByLabelText('Open actions menu');
-    await user.click(actionsButton);
+    // Open actions menu and click Edit - use getAllByLabelText since there are multiple action buttons
+    const actionsButtons = screen.getAllByLabelText('Open actions menu');
+    await user.click(actionsButtons[0]);
 
     const editButton = screen.getByText('Edit');
     await user.click(editButton);
@@ -216,9 +217,9 @@ describe('Issue #40: Success notifications after mutations', () => {
       expect(screen.getByText('John Doe')).toBeInTheDocument();
     });
 
-    // Open actions menu and click Delete
-    const actionsButton = screen.getByLabelText('Open actions menu');
-    await user.click(actionsButton);
+    // Open actions menu and click Delete - use getAllByLabelText since there are multiple action buttons
+    const actionsButtons = screen.getAllByLabelText('Open actions menu');
+    await user.click(actionsButtons[0]);
 
     const deleteButton = screen.getByText('Delete');
     await user.click(deleteButton);
