@@ -23,13 +23,14 @@ export default defineConfig({
     globals: true,
     setupFiles: "./src/test/setup.ts",
     css: true,
+    include: ['./src/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'], // Only include frontend tests (note the ./ prefix)
     exclude: [
       '**/node_modules/**',
       '**/dist/**',
+      '**/server/**', // Explicitly exclude server directory
       '**/cypress/**',
       '**/.{idea,git,cache,output,temp}/**',
       '**/{karma,rollup,webpack,vite,vitest,jest,ava,babel,nyc,cypress,tsup,build,eslint,prettier}.config.*',
-      '**/server/**', // Exclude backend tests
     ],
   },
 });
