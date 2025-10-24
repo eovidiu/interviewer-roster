@@ -38,6 +38,7 @@ export function MarkInterviewsPage() {
   const handleSave = async () => {
     try {
       // Auto-save is handled by the calendar component
+      // We don't need to reload here as the calendar manages its own state
       console.log("Interview data saved successfully");
     } catch (error) {
       console.error("Failed to save data:", error);

@@ -313,10 +313,6 @@ export class EventRepository {
       return this.findById(id)
     }
 
-    // Add updated_by
-    fields.push('updated_by = ?')
-    params.push(auditContext.userEmail || null)
-
     // Add ID to params
     params.push(id)
 

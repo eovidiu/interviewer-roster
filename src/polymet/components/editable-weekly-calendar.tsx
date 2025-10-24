@@ -9,15 +9,17 @@ import {
 } from "@/polymet/data/mock-interview-events-data";
 import { db } from "@/polymet/data/database-service";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   ChevronLeftIcon,
   ChevronRightIcon,
   CalendarIcon,
+  SearchIcon,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import type { AuditContext } from "@/polymet/data/database-service";
 import { InterviewDayCell } from "./interview-day-cell";
-import { createISOFromTime, createEndTime, isDuplicateTime } from "@/lib/time-utils";
+import { createISOFromTime, createEndTime, isDuplicateTime, extractTimeFromISO } from "@/lib/time-utils";
 import { toast } from "sonner";
 import { useAuth } from "@/polymet/data/auth-context";
 
@@ -54,6 +56,7 @@ export function EditableWeeklyCalendar({
   const [isSaving, setIsSaving] = useState(false);
   const [addingCell, setAddingCell] = useState<string | null>(null); // Track which cell is adding
   const [lastSynced, setLastSynced] = useState<Date | null>(null);
+  const [searchQuery, setSearchQuery] = useState<string>("");
   const initializedRef = useRef(false);
   const currentWeekRef = useRef(currentWeekStart.toISOString());
 
@@ -169,29 +172,42 @@ export function EditableWeeklyCalendar({
     );
   };
 
-  // Add new interview entry (defaults: 09:00, status: pending, 1 hour duration)
+  // Find next available time slot for a day (09:00-20:00 range)
+  const findNextAvailableTime = (dayEvents: InterviewEvent[]): string => {
+    // Extract existing times and sort them
+    const existingTimes = dayEvents.map(e => extractTimeFromISO(e.start_time)).sort();
+
+    // Start from 09:00 and increment by 1 hour until we find a free slot
+    for (let hour = 9; hour <= 20; hour++) {
+      const timeString = `${hour.toString().padStart(2, '0')}:00`;
+      if (!existingTimes.includes(timeString)) {
+        return timeString;
+      }
+    }
+
+    // Fallback to 09:00 (shouldn't reach here due to max capacity check)
+    return '09:00';
+  };
+
+  // Add new interview entry (defaults: next available hour, status: pending, 1 hour duration)
   const handleAddEntry = async (interviewerEmail: string, date: Date) => {
     const cellKey = `${interviewerEmail}-${formatDateString(date)}`;
     setAddingCell(cellKey);
 
     try {
-      const defaultTime = '09:00';
       const dayEvents = filterEventsByDay(localEvents, interviewerEmail, date);
 
-      // Check for duplicate time
-      if (isDuplicateTime(defaultTime, dayEvents)) {
-        toast.error('This time slot is already booked for this interviewer');
-        return;
-      }
-
-      // Check max capacity
+      // Check max capacity first
       if (dayEvents.length >= 3) {
         toast.error('Maximum 3 interview slots per day');
         return;
       }
 
-      const startTime = createISOFromTime(date, defaultTime);
-      const endTime = createEndTime(date, defaultTime, 60);
+      // Find next available time slot
+      const nextAvailableTime = findNextAvailableTime(dayEvents);
+
+      const startTime = createISOFromTime(date, nextAvailableTime);
+      const endTime = createEndTime(date, nextAvailableTime, 60);
 
       const newEvent = await db.createInterviewEvent({
         interviewer_email: interviewerEmail,
@@ -280,10 +296,43 @@ export function EditableWeeklyCalendar({
     }
   };
 
-  // Calculate total interviews for the week per interviewer
+  // Calculate total interviews for the current week per interviewer
   const getWeekTotal = (interviewerEmail: string) => {
-    return localEvents.filter(event => event.interviewer_email === interviewerEmail).length;
+    const weekStart = new Date(currentWeekStart);
+    weekStart.setHours(0, 0, 0, 0);
+
+    const weekEnd = new Date(currentWeekStart);
+    weekEnd.setDate(weekEnd.getDate() + 4); // Friday (Mon + 4 days)
+    weekEnd.setHours(23, 59, 59, 999);
+
+    return localEvents.filter(event => {
+      if (event.interviewer_email !== interviewerEmail) return false;
+
+      const eventDate = new Date(event.start_time);
+      return eventDate >= weekStart && eventDate <= weekEnd;
+    }).length;
   };
+
+  // Filter interviewers based on search query (min 3 characters)
+  const filteredInterviewers = interviewers.filter((interviewer) => {
+    if (!interviewer.is_active) return false;
+
+    // Only filter if search query has at least 3 characters
+    if (searchQuery.length < 3) return true;
+
+    const query = searchQuery.toLowerCase();
+    const fullName = interviewer.name.toLowerCase();
+    const email = interviewer.email.toLowerCase();
+
+    // Split name into parts to search first name and last name separately
+    const nameParts = fullName.split(' ');
+
+    return (
+      fullName.includes(query) ||
+      email.includes(query) ||
+      nameParts.some(part => part.includes(query))
+    );
+  });
 
   return (
     <div className="space-y-4">
@@ -330,6 +379,25 @@ export function EditableWeeklyCalendar({
           <span><strong className="bg-gray-500 text-white px-2 py-0.5 rounded">C</strong> = Cancelled</span>
         </div>
       </div>
+
+      {/* Search Filter */}
+      <div className="flex items-center gap-2">
+        <div className="relative flex-1 max-w-sm">
+          <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            type="text"
+            placeholder="Search interviewers (min 3 letters)..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9"
+          />
+        </div>
+        {searchQuery.length >= 3 && (
+          <span className="text-sm text-muted-foreground">
+            Showing {filteredInterviewers.length} of {interviewers.filter(i => i.is_active).length} interviewers
+          </span>
+        )}
+      </div>
       {/* Calendar Grid */}
       <div className="border border-border rounded-lg overflow-hidden">
         <div className="overflow-x-auto">
@@ -360,9 +428,7 @@ export function EditableWeeklyCalendar({
               </tr>
             </thead>
             <tbody>
-              {interviewers
-                .filter((interviewer) => interviewer.is_active)
-                .map((interviewer) => (
+              {filteredInterviewers.map((interviewer) => (
                   <tr
                     key={interviewer.id}
                     className="border-t border-border hover:bg-muted/30"
@@ -420,8 +486,8 @@ export function EditableWeeklyCalendar({
       {/* Summary */}
       <div className="flex items-center justify-between text-sm text-muted-foreground">
         <span>
-          Showing {interviewers.filter((i) => i.is_active).length} active
-          interviewers
+          Showing {filteredInterviewers.length} active interviewer{filteredInterviewers.length !== 1 ? 's' : ''}
+          {searchQuery.length >= 3 && ` (filtered from ${interviewers.filter((i) => i.is_active).length})`}
         </span>
       </div>
     </div>

@@ -116,6 +116,7 @@ export class ApiClient {
    * Make POST request
    */
   async post<T = unknown>(path: string, data: unknown): Promise<T> {
+    console.log(`🌐 API POST ${path}:`, data);
     const response = await fetch(`${this.baseURL}${path}`, {
       method: 'POST',
       headers: this.getHeaders(),

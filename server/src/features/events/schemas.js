@@ -14,19 +14,23 @@ export const EventStatusEnum = Type.Union([
 /**
  * Complete Event Schema
  * Represents an interview event from the database
+ * Matches actual database schema
  */
 export const EventSchema = Type.Object({
   id: Type.String(),
   interviewer_email: Type.String({ format: 'email' }),
+  calendar_event_id: Type.Union([Type.String(), Type.Null()]),
   start_time: Type.String({ format: 'date-time' }),
   end_time: Type.String({ format: 'date-time' }),
+  skills_assessed: Type.Union([Type.Array(Type.String()), Type.Null()]),
+  candidate_name: Type.Union([Type.String(), Type.Null()]),
+  position: Type.Union([Type.String(), Type.Null()]),
+  scheduled_date: Type.Union([Type.String(), Type.Null()]),
+  duration_minutes: Type.Union([Type.Integer(), Type.Null()]),
   status: EventStatusEnum,
-  candidate_name: Type.String(),
-  candidate_email: Type.Optional(Type.String({ format: 'email' })),
-  position: Type.String(),
-  skills_assessed: Type.Array(Type.String()),
-  feedback: Type.Optional(Type.String()),
-  rating: Type.Optional(Type.Integer({ minimum: 1, maximum: 5 })),
+  notes: Type.Union([Type.String(), Type.Null()]),
+  marked_by: Type.Union([Type.String(), Type.Null()]),
+  marked_at: Type.Union([Type.String(), Type.Null()]),
   created_at: Type.String({ format: 'date-time' }),
   updated_at: Type.String({ format: 'date-time' })
 })
@@ -34,35 +38,43 @@ export const EventSchema = Type.Object({
 /**
  * Create Event Schema
  * For POST /api/events
+ * Matches actual database schema
  */
 export const CreateEventSchema = Type.Object({
   interviewer_email: Type.String({ format: 'email' }),
+  calendar_event_id: Type.Optional(Type.String()),
   start_time: Type.String({ format: 'date-time' }),
   end_time: Type.String({ format: 'date-time' }),
+  skills_assessed: Type.Optional(Type.Array(Type.String(), { minItems: 0 })),
+  candidate_name: Type.Optional(Type.String({ minLength: 1, maxLength: 255 })),
+  position: Type.Optional(Type.String({ minLength: 1, maxLength: 255 })),
+  scheduled_date: Type.Optional(Type.String()),
+  duration_minutes: Type.Optional(Type.Integer({ minimum: 1 })),
   status: Type.Optional(EventStatusEnum),
-  candidate_name: Type.String({ minLength: 1, maxLength: 255 }),
-  candidate_email: Type.Optional(Type.String({ format: 'email' })),
-  position: Type.String({ minLength: 1, maxLength: 255 }),
-  skills_assessed: Type.Array(Type.String(), { minItems: 0 }),
-  feedback: Type.Optional(Type.String()),
-  rating: Type.Optional(Type.Integer({ minimum: 1, maximum: 5 }))
+  notes: Type.Optional(Type.String()),
+  marked_by: Type.Optional(Type.String()),
+  marked_at: Type.Optional(Type.String())
 })
 
 /**
  * Update Event Schema
  * For PUT /api/events/:id
+ * Matches actual database schema
  */
 export const UpdateEventSchema = Type.Object({
   interviewer_email: Type.Optional(Type.String({ format: 'email' })),
+  calendar_event_id: Type.Optional(Type.String()),
   start_time: Type.Optional(Type.String({ format: 'date-time' })),
   end_time: Type.Optional(Type.String({ format: 'date-time' })),
-  status: Type.Optional(EventStatusEnum),
-  candidate_name: Type.Optional(Type.String({ minLength: 1, maxLength: 255 })),
-  candidate_email: Type.Optional(Type.String({ format: 'email' })),
-  position: Type.Optional(Type.String({ minLength: 1, maxLength: 255 })),
   skills_assessed: Type.Optional(Type.Array(Type.String(), { minItems: 0 })),
-  feedback: Type.Optional(Type.String()),
-  rating: Type.Optional(Type.Integer({ minimum: 1, maximum: 5 }))
+  candidate_name: Type.Optional(Type.String({ minLength: 1, maxLength: 255 })),
+  position: Type.Optional(Type.String({ minLength: 1, maxLength: 255 })),
+  scheduled_date: Type.Optional(Type.String()),
+  duration_minutes: Type.Optional(Type.Integer({ minimum: 1 })),
+  status: Type.Optional(EventStatusEnum),
+  notes: Type.Optional(Type.String()),
+  marked_by: Type.Optional(Type.String()),
+  marked_at: Type.Optional(Type.String())
 })
 
 /**
