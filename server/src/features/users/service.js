@@ -68,4 +68,46 @@ export class UserService {
 
     return updatedUser
   }
+
+  /**
+   * Delete user by email
+   * @param {string} email
+   * @param {Object} adminUser - User making the deletion
+   * @returns {Object} { success: true }
+   */
+  async deleteUser(email, adminUser) {
+    // Protect eovidiu@gmail.com from deletion
+    const protectedEmail = 'eovidiu@gmail.com'
+    if (email.toLowerCase() === protectedEmail.toLowerCase()) {
+      throw new Error('Cannot delete protected user account')
+    }
+
+    const user = this.repository.findByEmail(email)
+
+    if (!user) {
+      throw new Error('User not found')
+    }
+
+    // Delete user
+    const deleted = this.repository.delete(email)
+
+    if (!deleted) {
+      throw new Error('Failed to delete user')
+    }
+
+    // Log user deletion in audit log
+    await this.auditLogger.log({
+      action: 'user.deleted',
+      userEmail: adminUser.email,
+      userName: adminUser.name,
+      details: {
+        deletedUserEmail: email,
+        deletedUserId: user.id,
+        deletedUserName: user.name,
+        deletedUserRole: user.role,
+      },
+    })
+
+    return { success: true, deletedEmail: email }
+  }
 }

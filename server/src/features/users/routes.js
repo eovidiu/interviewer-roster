@@ -127,4 +127,71 @@ export default async function userRoutes(fastify, options) {
       }
     }
   )
+
+  /**
+   * DELETE /api/users/:email
+   * Delete user (admin only)
+   * Protected: Cannot delete eovidiu@gmail.com
+   */
+  fastify.delete(
+    '/:email',
+    {
+      schema: {
+        description: 'Delete user (protected email cannot be deleted)',
+        tags: ['users'],
+        params: {
+          type: 'object',
+          required: ['email'],
+          properties: {
+            email: { type: 'string', format: 'email' },
+          },
+        },
+        response: {
+          200: {
+            type: 'object',
+            properties: {
+              success: { type: 'boolean' },
+              deletedEmail: { type: 'string' },
+            },
+          },
+          403: {
+            type: 'object',
+            properties: {
+              error: { type: 'string' },
+            },
+          },
+          404: {
+            type: 'object',
+            properties: {
+              error: { type: 'string' },
+            },
+          },
+        },
+      },
+      preHandler: fastify.authenticate,
+    },
+    async (request, reply) => {
+      // Check if user is admin
+      if (request.user.role !== 'admin') {
+        return reply.code(403).send({ error: 'Admin access required' })
+      }
+
+      try {
+        const result = await userService.deleteUser(
+          request.params.email,
+          request.user
+        )
+
+        return result
+      } catch (error) {
+        if (error.message === 'User not found') {
+          return reply.code(404).send({ error: error.message })
+        }
+        if (error.message === 'Cannot delete protected user account') {
+          return reply.code(403).send({ error: error.message })
+        }
+        throw error
+      }
+    }
+  )
 }

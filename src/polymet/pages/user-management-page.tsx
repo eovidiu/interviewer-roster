@@ -25,7 +25,7 @@ import {
 } from '@/components/ui/select'
 import { Label } from '@/components/ui/label'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
-import { AlertCircleIcon, CheckCircleIcon, UsersIcon } from 'lucide-react'
+import { AlertCircleIcon, CheckCircleIcon, UsersIcon, TrashIcon } from 'lucide-react'
 
 interface User {
   id: string
@@ -55,6 +55,13 @@ export function UserManagementPage() {
   const [updating, setUpdating] = useState(false)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
   const [updateError, setUpdateError] = useState<string | null>(null)
+  const [userToDelete, setUserToDelete] = useState<User | null>(null)
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
+
+  // Protected email that cannot be deleted
+  const PROTECTED_EMAIL = 'eovidiu@gmail.com'
 
   // Check if current user is admin
   const isAdmin = currentUser?.role === 'admin'
@@ -120,6 +127,47 @@ export function UserManagementPage() {
     setIsDialogOpen(false)
     setSelectedUser(null)
     setUpdateError(null)
+  }
+
+  const handleDeleteUser = (user: User) => {
+    setUserToDelete(user)
+    setIsDeleteDialogOpen(true)
+    setDeleteError(null)
+    setSuccessMessage(null)
+  }
+
+  const handleConfirmDelete = async () => {
+    if (!userToDelete) return
+
+    try {
+      setDeleting(true)
+      setDeleteError(null)
+
+      await apiClient.delete(`/users/${userToDelete.email}`)
+
+      // Remove user from local state
+      setUsers((prev) => prev.filter((u) => u.email !== userToDelete.email))
+
+      setSuccessMessage(`User ${userToDelete.name} deleted successfully`)
+      setIsDeleteDialogOpen(false)
+      setUserToDelete(null)
+    } catch (err: any) {
+      console.error('Error deleting user:', err)
+      const errorMessage = err.response?.data?.error || 'Failed to delete user. Please try again.'
+      setDeleteError(errorMessage)
+    } finally {
+      setDeleting(false)
+    }
+  }
+
+  const handleCancelDelete = () => {
+    setIsDeleteDialogOpen(false)
+    setUserToDelete(null)
+    setDeleteError(null)
+  }
+
+  const canDeleteUser = (email: string) => {
+    return email.toLowerCase() !== PROTECTED_EMAIL.toLowerCase()
   }
 
   const filteredUsers = users.filter(
@@ -248,14 +296,30 @@ export function UserManagementPage() {
                     {formatLastLogin(user.last_login_at)}
                   </td>
                   <td className="px-4 py-3">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleRoleChange(user)}
-                      aria-label={`Change role for ${user.name}`}
-                    >
-                      Change Role
-                    </Button>
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleRoleChange(user)}
+                        aria-label={`Change role for ${user.name}`}
+                      >
+                        Change Role
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        onClick={() => handleDeleteUser(user)}
+                        disabled={!canDeleteUser(user.email)}
+                        aria-label={`Delete ${user.name}`}
+                        title={
+                          !canDeleteUser(user.email)
+                            ? 'This user account is protected and cannot be deleted'
+                            : `Delete ${user.name}`
+                        }
+                      >
+                        <TrashIcon className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -311,6 +375,51 @@ export function UserManagementPage() {
               disabled={updating || newRole === selectedUser?.role}
             >
               {updating ? 'Updating...' : 'Confirm'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete User Dialog */}
+      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirm User Deletion</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete {userToDelete?.name} ({userToDelete?.email})?
+              This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+
+          {deleteError && (
+            <Alert variant="destructive" className="mb-4">
+              <AlertCircleIcon className="h-4 w-4" />
+              <AlertDescription>{deleteError}</AlertDescription>
+            </Alert>
+          )}
+
+          <Alert variant="destructive">
+            <AlertCircleIcon className="h-4 w-4" />
+            <AlertTitle>Warning</AlertTitle>
+            <AlertDescription>
+              This will permanently delete the user account and all associated data.
+            </AlertDescription>
+          </Alert>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={handleCancelDelete}
+              disabled={deleting}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleConfirmDelete}
+              disabled={deleting}
+            >
+              {deleting ? 'Deleting...' : 'Delete User'}
             </Button>
           </DialogFooter>
         </DialogContent>

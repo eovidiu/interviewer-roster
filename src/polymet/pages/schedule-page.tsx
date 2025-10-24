@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { InterviewerScheduleCard } from "@/polymet/components/interviewer-schedule-card";
-import { WeeklyCalendarView } from "@/polymet/components/weekly-calendar-view";
+import { ReadOnlyWeeklyCalendar } from "@/polymet/components/readonly-weekly-calendar";
 import { db } from "@/polymet/data/database-service";
 import type { Interviewer } from "@/polymet/data/mock-interviewers-data";
 import type { InterviewEvent } from "@/polymet/data/mock-interview-events-data";
@@ -108,14 +108,24 @@ export function SchedulePage() {
     }
   });
 
-  // Calculate last week's data (7 days ago to today)
+  // Calculate last week's data (previous Monday-Sunday)
   const now = new Date();
+  const currentDay = now.getDay(); // 0 = Sunday, 1 = Monday, etc.
+  const daysToLastMonday = currentDay === 0 ? 6 : currentDay - 1; // Days since this week's Monday
+
+  // Get last week's Monday
   const lastWeekStart = new Date(now);
-  lastWeekStart.setDate(now.getDate() - 7);
+  lastWeekStart.setDate(now.getDate() - daysToLastMonday - 7);
+  lastWeekStart.setHours(0, 0, 0, 0);
+
+  // Get last week's Sunday
+  const lastWeekEnd = new Date(lastWeekStart);
+  lastWeekEnd.setDate(lastWeekStart.getDate() + 6);
+  lastWeekEnd.setHours(23, 59, 59, 999);
 
   const lastWeekEvents = events.filter((event) => {
     const eventDate = new Date(event.start_time);
-    return eventDate >= lastWeekStart && eventDate <= now;
+    return eventDate >= lastWeekStart && eventDate <= lastWeekEnd;
   });
 
   const lastWeekInterviewers = new Set(
@@ -124,6 +134,23 @@ export function SchedulePage() {
 
   const totalInterviewsLastWeek = lastWeekEvents.length;
   const activeInterviewersLastWeek = lastWeekInterviewers.size;
+
+  // Calculate this week's total interviews (current Monday-Sunday)
+  const thisWeekStart = new Date(now);
+  const daysToThisMonday = currentDay === 0 ? 6 : currentDay - 1;
+  thisWeekStart.setDate(now.getDate() - daysToThisMonday);
+  thisWeekStart.setHours(0, 0, 0, 0);
+
+  const thisWeekEnd = new Date(thisWeekStart);
+  thisWeekEnd.setDate(thisWeekStart.getDate() + 6);
+  thisWeekEnd.setHours(23, 59, 59, 999);
+
+  const thisWeekEvents = events.filter((event) => {
+    const eventDate = new Date(event.start_time);
+    return eventDate >= thisWeekStart && eventDate <= thisWeekEnd;
+  });
+
+  const totalInterviewsThisWeek = thisWeekEvents.length;
 
   const totalUpcoming = interviewerSchedules.reduce(
     (sum, schedule) => sum + schedule.upcomingCount,
@@ -194,15 +221,15 @@ export function SchedulePage() {
           <div className="flex items-center gap-2 text-muted-foreground text-sm mb-1">
             <CalendarIcon className="h-4 w-4" />
 
-            <span>Active Interviewers (Last Week)</span>
+            <span>This Week's Total</span>
           </div>
-          <p className="text-2xl font-bold">{activeInterviewersLastWeek}</p>
+          <p className="text-2xl font-bold">{totalInterviewsThisWeek}</p>
         </div>
       </div>
 
       {/* Calendar View */}
       {viewMode === "calendar" ? (
-        <WeeklyCalendarView interviewers={interviewers} events={events} />
+        <ReadOnlyWeeklyCalendar interviewers={interviewers} events={events} />
       ) : (
         <>
           {/* Filters */}

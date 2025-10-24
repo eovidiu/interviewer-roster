@@ -131,4 +131,17 @@ export class UserRepository {
     const result = this.db.prepare(sql).get(...params)
     return result.total
   }
+
+  /**
+   * Delete user by email
+   * @param {string} email
+   * @returns {boolean} True if deleted
+   */
+  delete(email) {
+    const result = this.db
+      .prepare('DELETE FROM users WHERE email = ?')
+      .run(email)
+
+    return result.changes > 0
+  }
 }
