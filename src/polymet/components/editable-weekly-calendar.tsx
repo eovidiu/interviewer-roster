@@ -52,6 +52,7 @@ export function EditableWeeklyCalendar({
   const [localEvents, setLocalEvents] = useState<InterviewEvent[]>(events);
 
   const [addingCell, setAddingCell] = useState<string | null>(null); // Track which cell is adding
+  const [isSaving, setIsSaving] = useState(false);
   const [lastSynced, setLastSynced] = useState<Date | null>(null);
   const [searchQuery, setSearchQuery] = useState<string>("");
   const initializedRef = useRef(false);
