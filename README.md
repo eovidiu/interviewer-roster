@@ -1,41 +1,92 @@
 # Interviewer Roster
 
-Local-first dashboard for managing interviewer availability, events, and audit history. The app runs entirely in the browser using `localStorage`, making it ideal for demos and rapid iteration without a backend.
+Full-stack dashboard for managing interviewer availability, events, and audit history. The app features a React frontend with a Fastify backend API, supporting both local-first development and backend-integrated workflows.
 
 ## Overview
 - React 19 + Vite 6 single-page app styled with Tailwind and shadcn/ui components.
-- Local persistence seeded with realistic mock interviewers and events.
+- Fastify backend API with SQLite database for persistent storage.
+- Local persistence option using `localStorage` for rapid prototyping.
 - Role-based navigation enforcing viewer, talent, and admin permissions.
-- CSV import/export stubs to exercise future integrations.
+- Google OAuth integration for authentication (mock OAuth for development).
+- CSV import/export functionality.
 
 ## Prerequisites
 - Node.js 20+ (tested with 20.x and 22.x)
 - npm 10+
 
 ## Installation & Development
+
+### Quick Start (Frontend + Backend)
 ```bash
-npm install          # install dependencies
-npm run dev          # start Vite dev server on http://localhost:5173
+# Install root dependencies
+npm install
+
+# Install backend dependencies
+cd server
+npm install
+cd ..
+
+# Start both frontend and backend servers
+npm run dev          # Runs both servers concurrently
+                     # Frontend: http://localhost:5173
+                     # Backend:  http://localhost:3000
 ```
 
-Log in with the **Sign in with Google** button; the mock OAuth flow provisions an admin session (`auth_user` saved in `localStorage`) so every protected route is accessible.
+### Running Servers Individually
+```bash
+npm run dev:frontend # Start only Vite dev server (port 5173)
+npm run dev:backend  # Start only Fastify backend (port 3000)
+```
+
+### Backend Setup
+The backend requires initial database setup:
+
+```bash
+cd server
+npm run db:migrate   # Create database schema
+npm run db:seed      # Populate with seed data
+# OR
+npm run db:reset     # Run both migration and seeding
+```
+
+Log in with the **Sign in with Google** button; the OAuth flow provisions an admin session so every protected route is accessible.
 
 ### Available Scripts
-- `npm run dev` – start the development server with HMR.
+
+**Root Project:**
+- `npm run dev` – start both frontend and backend servers concurrently.
+- `npm run dev:frontend` – start only the Vite dev server with HMR.
+- `npm run dev:backend` – start only the Fastify backend API.
 - `npm run build` – create an optimized production bundle under `dist/`.
 - `npm run preview` – serve the production build locally.
 - `npm run lint` – run ESLint on all TypeScript and TSX files.
-- `npm test` – execute Vitest + React Testing Library smoke tests that mount the router and verify seeded data renders on the dashboard, interviewers, and events pages.
+- `npm test` – execute Vitest + React Testing Library tests.
 
-- The database service waits for its bootstrap to finish before resolving queries, so first-run sessions immediately show the mock interviewers and events.
-- Use **Database → Import Mock Data** in the UI to reload the demo dataset; the confirmation dialog ensures you do not accidentally overwrite custom data.
-- Clearing the store via **Database → Clear Database** leaves the UI empty until you import mock data or load a backup.
-- Data persists per browser profile; clear the `localStorage` key `interview_roster_db` to simulate a brand new browser profile.
+**Backend (`server/`):**
+- `npm run dev` – start backend with Node.js watch mode.
+- `npm run start` – start backend in production mode.
+- `npm run db:migrate` – create database schema.
+- `npm run db:seed` – populate database with seed data.
+- `npm run db:reset` – reset database (migrate + seed).
+- `npm test` – run backend Jest tests.
+- `npm run lint` – run ESLint on backend code.
 
-## Data Seeding & Persistence
-- The app seeds `interview_roster_db` in `localStorage` the first time it loads (or whenever the database key is missing). Mock data lives in `src/polymet/data/mock-*.ts`.
-- Authentication state is stored under the `auth_user` key. Clicking the Google mock button overwrites that entry with an admin user.
-- To reset data manually, either clear those two keys in DevTools or use **Database → Import Mock Data** within the application. The UI also exposes explicit reset/clear actions on the database management screen.
+## Data Persistence
+
+The application supports two persistence modes:
+
+### Backend API Mode (Default)
+- Data is stored in SQLite database at `server/data/interviewer-roster.db`
+- Run `npm run db:reset` in the `server/` directory to reset the database
+- Authentication uses JWT tokens stored in memory (secure, but lost on refresh)
+- Use **Database → Import Mock Data** in the UI to reload demo data
+
+### LocalStorage Mode (Development/Demo)
+- Data is stored in browser `localStorage` under `interview_roster_db` key
+- First-run sessions automatically seed mock data
+- Authentication state stored under `auth_user` key
+- Clear localStorage keys in DevTools to reset data
+- Ideal for demos and rapid iteration without backend
 
 ## Roles & Route Access
 - **viewer** – read-only access to dashboard, interviewers, events, and schedule.

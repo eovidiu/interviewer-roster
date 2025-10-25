@@ -4,7 +4,9 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "concurrently \"npm run dev:frontend\" \"npm run dev:backend\" --names \"frontend,backend\" --prefix-colors \"cyan,magenta\"",
+    "dev:frontend": "vite",
+    "dev:backend": "cd server && npm run dev",
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
@@ -43,6 +45,7 @@
     "@vitejs/plugin-react": "4.7.0",
     "@vitest/ui": "^3.2.4",
     "autoprefixer": "10.4.21",
+    "concurrently": "^9.2.1",
     "eslint": "9.37.0",
     "eslint-plugin-react-hooks": "5.2.0",
     "eslint-plugin-react-refresh": "0.4.23",
