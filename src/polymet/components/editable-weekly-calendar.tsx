@@ -328,11 +328,8 @@ export function EditableWeeklyCalendar({
     <div className="space-y-4">
       {/* Header with navigation */}
       <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold">Mark Interviews</h2>
-          <p className="text-sm text-muted-foreground">{formatWeekRange()}</p>
-        </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-4">
+          <span className="text-sm text-muted-foreground">{formatWeekRange()}</span>
           {lastSynced && (
             <span className="text-sm text-muted-foreground">
               Last synced: {lastSynced.toLocaleTimeString()}
@@ -343,6 +340,8 @@ export function EditableWeeklyCalendar({
               Saving...
             </span>
           )}
+        </div>
+        <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" onClick={goToCurrentWeek}>
             <CalendarIcon className="h-4 w-4 mr-2" />
             Today

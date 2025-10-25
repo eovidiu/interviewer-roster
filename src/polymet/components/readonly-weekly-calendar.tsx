@@ -192,10 +192,7 @@ export function ReadOnlyWeeklyCalendar({
     <div className="space-y-4">
       {/* Header with navigation */}
       <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold">View Schedule</h2>
-          <p className="text-sm text-muted-foreground">{formatWeekRange()}</p>
-        </div>
+        <div className="text-sm text-muted-foreground">{formatWeekRange()}</div>
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" onClick={goToCurrentWeek}>
             <CalendarIcon className="h-4 w-4 mr-2" />
