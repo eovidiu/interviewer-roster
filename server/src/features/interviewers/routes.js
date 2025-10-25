@@ -12,7 +12,7 @@ import {
  * @param {import('fastify').FastifyInstance} fastify
  * @param {Object} options
  */
-export default async function interviewerRoutes(fastify, _options) {
+export default async function interviewerRoutes(fastify, options) {
   const service = options.service
 
   // GET /api/interviewers - List all interviewers

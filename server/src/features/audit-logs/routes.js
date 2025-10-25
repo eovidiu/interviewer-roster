@@ -13,7 +13,7 @@ import {
  * Admin users can see all logs
  * Regular users can only see their own logs
  */
-export default async function auditLogRoutes(fastify, _options) {
+export default async function auditLogRoutes(fastify, options) {
   const service = options.service
 
   /**
