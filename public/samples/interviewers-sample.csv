@@ -1,3 +1,5 @@
-id,name,email,role,skills,is_active,timezone,calendar_sync_enabled,calendar_sync_consent_at,last_synced_at,created_at,updated_at,created_by,modified_at,modified_by
-int-demo-001,Sarah Chen,sarah.chen@company.com,admin,"React;TypeScript",true,America/Los_Angeles,true,2024-01-15T10:30:00Z,2024-03-20T14:22:00Z,2024-01-10T09:00:00Z,2024-03-20T14:22:00Z,system@company.com,2024-03-15T11:20:00Z,sarah.chen@company.com
-int-demo-002,Michael Rodriguez,michael.rodriguez@company.com,talent,"Node.js;API Development",true,America/New_York,true,2024-01-20T14:15:00Z,2024-03-20T13:45:00Z,2024-01-18T10:30:00Z,2024-03-10T08:05:00Z,sarah.chen@company.com,2024-03-10T08:05:00Z,michael.rodriguez@company.com
+id,name,email,role,skills,is_active,timezone,created_at,updated_at,created_by,modified_at,modified_by
+int-demo-001,Sarah Chen,sarah.chen@company.com,admin,"React;TypeScript",true,America/Los_Angeles,2024-01-10T09:00:00Z,2024-03-20T14:22:00Z,system@company.com,2024-03-15T11:20:00Z,sarah.chen@company.com
+int-demo-002,Michael Rodriguez,michael.rodriguez@company.com,talent,"Node.js;API Development",true,America/New_York,2024-01-18T10:30:00Z,2024-03-10T08:05:00Z,sarah.chen@company.com,2024-03-10T08:05:00Z,michael.rodriguez@company.com
+int-demo-003,Priya Patel,priya.patel@company.com,talent,"Java;Spring Boot;Microservices",true,Asia/Kolkata,2024-01-25T11:00:00Z,2024-03-01T10:45:00Z,sarah.chen@company.com,2024-03-01T10:45:00Z,michael.rodriguez@company.com
+int-demo-004,James Wilson,james.wilson@company.com,viewer,"DevOps;Kubernetes;CI/CD",true,Europe/London,2024-02-05T13:20:00Z,2024-02-05T13:20:00Z,sarah.chen@company.com,2024-02-05T13:20:00Z,sarah.chen@company.com
