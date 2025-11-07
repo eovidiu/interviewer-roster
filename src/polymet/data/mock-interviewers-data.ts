@@ -6,9 +6,6 @@ export interface Interviewer {
   role: "viewer" | "talent" | "admin";
   is_active: boolean;
   timezone: string;
-  calendar_sync_enabled: boolean;
-  calendar_sync_consent_at: string | null;
-  last_synced_at: string | null;
   created_at: string;
   created_by: string;
   modified_at: string;
@@ -24,9 +21,6 @@ export const mockInterviewers: Interviewer[] = [
     role: "admin",
     is_active: true,
     timezone: "America/Los_Angeles",
-    calendar_sync_enabled: true,
-    calendar_sync_consent_at: "2024-01-15T10:30:00Z",
-    last_synced_at: "2024-03-20T14:22:00Z",
     created_at: "2024-01-10T09:00:00Z",
     created_by: "system@company.com",
     modified_at: "2024-03-15T11:20:00Z",
@@ -40,9 +34,6 @@ export const mockInterviewers: Interviewer[] = [
     role: "talent",
     is_active: true,
     timezone: "America/New_York",
-    calendar_sync_enabled: true,
-    calendar_sync_consent_at: "2024-01-20T14:15:00Z",
-    last_synced_at: "2024-03-20T13:45:00Z",
     created_at: "2024-01-18T10:30:00Z",
     created_by: "sarah.chen@company.com",
     modified_at: "2024-02-10T09:15:00Z",
@@ -56,9 +47,6 @@ export const mockInterviewers: Interviewer[] = [
     role: "talent",
     is_active: true,
     timezone: "Asia/Kolkata",
-    calendar_sync_enabled: true,
-    calendar_sync_consent_at: "2024-02-01T08:00:00Z",
-    last_synced_at: "2024-03-20T12:30:00Z",
     created_at: "2024-01-25T11:00:00Z",
     created_by: "sarah.chen@company.com",
     modified_at: "2024-03-01T10:45:00Z",
@@ -72,9 +60,6 @@ export const mockInterviewers: Interviewer[] = [
     role: "viewer",
     is_active: true,
     timezone: "Europe/London",
-    calendar_sync_enabled: false,
-    calendar_sync_consent_at: null,
-    last_synced_at: null,
     created_at: "2024-02-05T13:20:00Z",
     created_by: "sarah.chen@company.com",
     modified_at: "2024-02-05T13:20:00Z",
@@ -88,9 +73,6 @@ export const mockInterviewers: Interviewer[] = [
     role: "talent",
     is_active: true,
     timezone: "America/Los_Angeles",
-    calendar_sync_enabled: true,
-    calendar_sync_consent_at: "2024-02-10T09:30:00Z",
-    last_synced_at: "2024-03-20T14:10:00Z",
     created_at: "2024-02-08T10:00:00Z",
     created_by: "sarah.chen@company.com",
     modified_at: "2024-03-10T15:30:00Z",
@@ -104,9 +86,6 @@ export const mockInterviewers: Interviewer[] = [
     role: "talent",
     is_active: true,
     timezone: "America/Chicago",
-    calendar_sync_enabled: true,
-    calendar_sync_consent_at: "2024-02-15T11:00:00Z",
-    last_synced_at: "2024-03-20T13:00:00Z",
     created_at: "2024-02-12T09:45:00Z",
     created_by: "sarah.chen@company.com",
     modified_at: "2024-02-20T14:15:00Z",
@@ -120,9 +99,6 @@ export const mockInterviewers: Interviewer[] = [
     role: "viewer",
     is_active: true,
     timezone: "America/New_York",
-    calendar_sync_enabled: false,
-    calendar_sync_consent_at: null,
-    last_synced_at: null,
     created_at: "2024-02-18T12:30:00Z",
     created_by: "sarah.chen@company.com",
     modified_at: "2024-02-18T12:30:00Z",
@@ -142,9 +118,6 @@ export const mockInterviewers: Interviewer[] = [
     role: "talent",
     is_active: false,
     timezone: "America/Denver",
-    calendar_sync_enabled: false,
-    calendar_sync_consent_at: "2024-01-30T10:00:00Z",
-    last_synced_at: "2024-03-01T09:00:00Z",
     created_at: "2024-01-28T11:15:00Z",
     created_by: "sarah.chen@company.com",
     modified_at: "2024-03-05T16:00:00Z",

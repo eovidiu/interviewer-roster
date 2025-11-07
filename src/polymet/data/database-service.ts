@@ -19,10 +19,7 @@ export interface Interviewer {
   role: string;
   skills: string[];
   is_active: boolean;
-  calendar_sync_enabled: boolean;
   timezone?: string;
-  calendar_sync_consent_at?: string | null;
-  last_synced_at?: string | null;
   created_by?: string;
   modified_at?: string;
   modified_by?: string;
@@ -346,7 +343,6 @@ class DatabaseService {
       role: data.role!,
       skills: data.skills || [],
       is_active: data.is_active ?? true,
-      calendar_sync_enabled: data.calendar_sync_enabled ?? false,
       created_at: data.created_at || now,
       updated_at: now,
     };

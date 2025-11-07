@@ -82,9 +82,6 @@ export function DashboardPage() {
       totalEvents > 0 ? ((ghostedEvents / totalEvents) * 100).toFixed(1) : "0.0";
 
     const activeInterviewers = interviewers.filter((i) => i.is_active).length;
-    const calendarSyncEnabled = interviewers.filter(
-      (i) => i.calendar_sync_enabled
-    ).length;
 
     const interviewsPerWeek =
       activeInterviewers > 0

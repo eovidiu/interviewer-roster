@@ -93,7 +93,6 @@ describe('CSV export functionality after lazy loading', () => {
         role: 'talent' as const,
         skills: ['React', 'TypeScript'],
         is_active: true,
-        calendar_sync_enabled: false,
         timezone: 'America/Los_Angeles',
         created_at: '2024-01-01T00:00:00Z',
         updated_at: '2024-01-01T00:00:00Z',

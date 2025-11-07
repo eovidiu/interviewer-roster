@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { DatabaseIcon, BellIcon, ShieldCheckIcon, CalendarIcon } from "lucide-react";
+import { DatabaseIcon, BellIcon, ShieldCheckIcon } from "lucide-react";
 
 export function SettingsPage() {
   return (
@@ -21,79 +21,6 @@ export function SettingsPage() {
           Manage system configuration and preferences (Admin only)
         </p>
       </div>
-
-      {/* Outlook 365 Calendar Integration */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center gap-2">
-            <CalendarIcon className="h-5 w-5" />
-
-            <CardTitle>Outlook 365 Calendar Integration</CardTitle>
-          </div>
-          <CardDescription>
-            Configure read-only access to shared Outlook calendars for automatic
-            interview tracking
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="client-id">Azure Application (Client) ID</Label>
-            <Input id="client-id" placeholder="Enter Azure AD Application ID" />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="client-secret">Client Secret Value</Label>
-            <Input
-              id="client-secret"
-              type="password"
-              placeholder="Enter Client Secret"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="tenant-id">Tenant ID</Label>
-            <Input id="tenant-id" placeholder="Enter Azure AD Tenant ID" />
-          </div>
-          <div className="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mb-4">
-            <p className="text-sm text-blue-900 dark:text-blue-100 font-medium mb-1">
-              📖 Read-Only Integration
-            </p>
-            <p className="text-xs text-blue-700 dark:text-blue-300">
-              This integration only reads from shared interviewer calendars. It
-              will NOT schedule interviews or modify calendar entries.
-            </p>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="shared-calendar-email">Shared Calendar Email</Label>
-            <Input
-              id="shared-calendar-email"
-              type="email"
-              placeholder="interviews@company.com"
-            />
-
-            <p className="text-xs text-muted-foreground">
-              Email address of the shared calendar to read interview events from
-            </p>
-          </div>
-          <div className="flex items-center justify-between">
-            <div className="space-y-0.5">
-              <Label>Auto-sync Calendar Events</Label>
-              <p className="text-xs text-muted-foreground">
-                Automatically read events every 15 minutes
-              </p>
-            </div>
-            <Switch defaultChecked />
-          </div>
-          <div className="flex items-center justify-between">
-            <div className="space-y-0.5">
-              <Label>Import Availability Status</Label>
-              <p className="text-xs text-muted-foreground">
-                Read free/busy status from shared Outlook calendars
-              </p>
-            </div>
-            <Switch defaultChecked />
-          </div>
-          <Button>Save Configuration</Button>
-        </CardContent>
-      </Card>
 
       {/* Notifications */}
       <Card>

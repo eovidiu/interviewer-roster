@@ -18,7 +18,6 @@ export interface InterviewerRecord {
   role: string;
   skills: string; // JSON string array
   is_active: number; // SQLite boolean (0 or 1)
-  calendar_sync_enabled: number; // SQLite boolean (0 or 1)
   created_at: string; // ISO date string
   updated_at: string; // ISO date string
 }
@@ -67,7 +66,6 @@ export const CREATE_TABLES_SQL = {
       role TEXT NOT NULL,
       skills TEXT NOT NULL,
       is_active INTEGER DEFAULT 1,
-      calendar_sync_enabled INTEGER DEFAULT 0,
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL
     )

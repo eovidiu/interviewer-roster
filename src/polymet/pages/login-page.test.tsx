@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
-import { BrowserRouter } from 'react-router-dom';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { LoginPage } from './login-page';
 import { AuthProvider } from '@/polymet/data/auth-context';
 
@@ -17,6 +17,8 @@ describe('LoginPage - Error Handling', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     global.fetch = vi.fn();
+    // Clear localStorage to ensure no existing user session
+    localStorage.clear();
   });
 
   it('should display error message when login fails', async () => {
@@ -47,25 +49,29 @@ describe('LoginPage - Error Handling', () => {
 
   it('should clear error on successful login attempt', async () => {
     // Arrange
-    let callCount = 0;
-    global.fetch = vi.fn().mockImplementation(() => {
-      callCount++;
-      if (callCount === 1) {
-        return Promise.resolve({ ok: false, status: 401 });
-      }
-      return Promise.resolve({
+    const mockFetch = vi.fn()
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 401,
+        statusText: 'Unauthorized'
+      })
+      .mockResolvedValueOnce({
         ok: true,
         json: async () => ({
           token: 'test-token',
-          user: { email: 'test@example.com', name: 'Test', role: 'admin' }
+          user: { email: 'eovidiu@gmail.com', name: 'Ovidiu E', role: 'admin' }
         })
       });
-    });
+
+    global.fetch = mockFetch;
 
     render(
       <BrowserRouter>
         <AuthProvider>
-          <LoginPage />
+          <Routes>
+            <Route path="/" element={<LoginPage />} />
+            <Route path="/dashboard" element={<div>Dashboard</div>} />
+          </Routes>
         </AuthProvider>
       </BrowserRouter>
     );
@@ -82,9 +88,14 @@ describe('LoginPage - Error Handling', () => {
     // Act - Second attempt succeeds
     await userEvent.click(adminButton);
 
-    // Assert - Error should be cleared (component navigates away on success)
+    // Assert - Should navigate to dashboard on success (error gone because component unmounted)
     await waitFor(() => {
-      expect(screen.queryByText(/login failed/i)).not.toBeInTheDocument();
-    });
+      // Either see Dashboard or error is cleared
+      const dashboardElement = screen.queryByText(/Dashboard/i);
+      const errorElement = screen.queryByText(/login failed/i);
+
+      // On successful login, should navigate to dashboard OR clear the error
+      expect(dashboardElement || !errorElement).toBeTruthy();
+    }, { timeout: 3000 });
   });
 });

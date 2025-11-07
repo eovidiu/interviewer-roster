@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { InterviewEvent } from "@/polymet/data/mock-interview-events-data";
 import {
   extractTimeFromISO,
@@ -31,6 +32,7 @@ export function InterviewStatusEntry({
   const [time, setTime] = useState(extractTimeFromISO(event.start_time));
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
 
   const handleTimeBlur = async () => {
 
@@ -87,12 +89,16 @@ export function InterviewStatusEntry({
     }
   };
 
-  const handleDelete = async () => {
+  const handleDeleteClick = () => {
     if (disabled || isSaving || isDeleting) {
       return;
     }
+    setDeleteConfirmOpen(true);
+  };
 
+  const confirmDelete = async () => {
     setIsDeleting(true);
+    setDeleteConfirmOpen(false);
     try {
       await onDelete(event.id);
       // Success toast handled by parent component
@@ -157,7 +163,7 @@ export function InterviewStatusEntry({
       <Button
         size="sm"
         variant="ghost"
-        onClick={handleDelete}
+        onClick={handleDeleteClick}
         disabled={disabled || isSaving || isDeleting}
         className="ml-auto w-6 h-6 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
         title="Delete this interview slot"
@@ -168,6 +174,18 @@ export function InterviewStatusEntry({
           <span className="text-lg leading-none">−</span>
         )}
       </Button>
+
+      {/* Delete Confirmation Dialog */}
+      <ConfirmDialog
+        open={deleteConfirmOpen}
+        onOpenChange={setDeleteConfirmOpen}
+        title="Confirm Deletion"
+        description="Are you sure you want to delete this interview slot? This action cannot be undone."
+        onConfirm={confirmDelete}
+        confirmText="Delete"
+        cancelText="Cancel"
+        variant="destructive"
+      />
     </div>
   );
 }

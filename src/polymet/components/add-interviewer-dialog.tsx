@@ -43,7 +43,6 @@ export function AddInterviewerDialog({
     role: "viewer" as "viewer" | "talent" | "admin",
     timezone: "America/Los_Angeles",
     is_active: true,
-    calendar_sync_enabled: false,
     skills: [] as string[],
   });
   const [skillInput, setSkillInput] = useState("");
@@ -61,7 +60,6 @@ export function AddInterviewerDialog({
         role: interviewer.role,
         timezone: interviewer.timezone,
         is_active: interviewer.is_active,
-        calendar_sync_enabled: interviewer.calendar_sync_enabled,
         skills: interviewer.skills,
       });
     } else {
@@ -71,7 +69,6 @@ export function AddInterviewerDialog({
         role: "viewer",
         timezone: "America/Los_Angeles",
         is_active: true,
-        calendar_sync_enabled: false,
         skills: [],
       });
     }
@@ -246,22 +243,6 @@ export function AddInterviewerDialog({
                 checked={formData.is_active}
                 onCheckedChange={(checked) =>
                   setFormData({ ...formData, is_active: checked })
-                }
-              />
-            </div>
-
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label htmlFor="calendar_sync">Calendar Sync</Label>
-                <p className="text-xs text-muted-foreground">
-                  Enable Outlook 365 Calendar integration
-                </p>
-              </div>
-              <Switch
-                id="calendar_sync"
-                checked={formData.calendar_sync_enabled}
-                onCheckedChange={(checked) =>
-                  setFormData({ ...formData, calendar_sync_enabled: checked })
                 }
               />
             </div>

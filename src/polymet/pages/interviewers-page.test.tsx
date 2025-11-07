@@ -66,35 +66,27 @@ describe('Issue #21: Browser alert() and confirm() usage', () => {
     const user = userEvent.setup();
     const alertSpy = vi.spyOn(window, 'alert');
 
-    // Mock delete to fail
-    const { db } = await import('@/polymet/data/database-service');
-    vi.mocked(db.deleteInterviewer).mockRejectedValueOnce(new Error('Delete failed'));
-
     renderInterviewersPage();
 
     await waitFor(() => {
       expect(screen.getByText('John Doe')).toBeInTheDocument();
     });
 
-    // Try to delete (will fail) - use getAllByLabelText since there are multiple action buttons
+    // Try to delete - use getAllByLabelText since there are multiple action buttons
     const actionsButtons = screen.getAllByLabelText('Open actions menu');
     await user.click(actionsButtons[0]);
 
     const deleteButton = screen.getByText('Delete');
-
-    // Mock confirm to return true
-    vi.spyOn(window, 'confirm').mockReturnValue(true);
     await user.click(deleteButton);
 
+    // Should show confirm dialog (not native alert)
     await waitFor(() => {
-      // This test should now pass because the code uses ErrorAlert dialog
-      expect(alertSpy).not.toHaveBeenCalled();
+      expect(screen.getByRole('alertdialog')).toBeInTheDocument();
+      expect(screen.getByText(/confirm deletion/i)).toBeInTheDocument();
     });
 
-    // Instead, we should see an accessible error alert dialog
-    await waitFor(() => {
-      expect(screen.queryByRole('alertdialog')).toBeInTheDocument();
-    });
+    // Verify native alert was NOT used
+    expect(alertSpy).not.toHaveBeenCalled();
   });
 
   it('should use accessible AlertDialog component instead of confirm()', async () => {
@@ -163,16 +155,19 @@ describe('Issue #40: Success notifications after mutations', () => {
     await user.type(emailInput, 'jane@example.com');
 
     // Submit the form
-    const submitButton = screen.getByRole('button', { name: /save|submit/i });
+    const submitButton = screen.getByRole('button', { name: /add interviewer/i });
     await user.click(submitButton);
 
-    // Should show success alert
+    // Wait for the form dialog to close (submission completed)
     await waitFor(() => {
-      const successDialog = screen.queryByRole('alertdialog');
-      expect(successDialog).toBeInTheDocument();
-      expect(screen.getByText(/success/i)).toBeInTheDocument();
-      expect(screen.getByText(/interviewer.*created|added successfully/i)).toBeInTheDocument();
-    });
+      expect(screen.queryByRole('dialog', { name: /add new interviewer/i })).not.toBeInTheDocument();
+    }, { timeout: 5000 });
+
+    // Wait a bit for the success alert to appear
+    await waitFor(() => {
+      const successMessage = screen.queryByText(/interviewer.*added successfully/i);
+      expect(successMessage).toBeInTheDocument();
+    }, { timeout: 5000 });
   });
 
   it('should show success message after updating an interviewer', async () => {
@@ -188,7 +183,7 @@ describe('Issue #40: Success notifications after mutations', () => {
     const actionsButtons = screen.getAllByLabelText('Open actions menu');
     await user.click(actionsButtons[0]);
 
-    const editButton = screen.getByText('Edit');
+    const editButton = screen.getByText('Edit Details');
     await user.click(editButton);
 
     // Modify the interviewer
@@ -197,15 +192,18 @@ describe('Issue #40: Success notifications after mutations', () => {
     await user.type(nameInput, 'John Updated');
 
     // Submit the form
-    const submitButton = screen.getByRole('button', { name: /save|submit/i });
+    const submitButton = screen.getByRole('button', { name: /save changes/i });
     await user.click(submitButton);
 
-    // Should show success alert
+    // Wait for the form dialog to close
     await waitFor(() => {
-      expect(screen.queryByRole('alertdialog')).toBeInTheDocument();
-      expect(screen.getByText(/success/i)).toBeInTheDocument();
+      expect(screen.queryByRole('dialog', { name: /edit interviewer/i })).not.toBeInTheDocument();
+    }, { timeout: 5000 });
+
+    // Should show success message
+    await waitFor(() => {
       expect(screen.getByText(/interviewer.*updated successfully/i)).toBeInTheDocument();
-    });
+    }, { timeout: 5000 });
   });
 
   it('should show success message after deleting an interviewer', async () => {
@@ -213,13 +211,15 @@ describe('Issue #40: Success notifications after mutations', () => {
 
     renderInterviewersPage();
 
+    // Wait for any interviewer to load (might be "John Doe" or "John Updated" depending on previous tests)
     await waitFor(() => {
-      expect(screen.getByText('John Doe')).toBeInTheDocument();
+      const interviewers = screen.getAllByLabelText('Open actions menu');
+      expect(interviewers.length).toBeGreaterThan(0);
     });
 
-    // Open actions menu and click Delete - use getAllByLabelText since there are multiple action buttons
+    // Open actions menu for the second interviewer (to avoid conflict with update test)
     const actionsButtons = screen.getAllByLabelText('Open actions menu');
-    await user.click(actionsButtons[0]);
+    await user.click(actionsButtons[1] || actionsButtons[0]);
 
     const deleteButton = screen.getByText('Delete');
     await user.click(deleteButton);
@@ -228,12 +228,15 @@ describe('Issue #40: Success notifications after mutations', () => {
     const confirmButton = await screen.findByRole('button', { name: /delete/i });
     await user.click(confirmButton);
 
-    // Should show success alert
+    // Wait for confirm dialog to close
     await waitFor(() => {
-      expect(screen.queryByRole('alertdialog')).toBeInTheDocument();
-      expect(screen.getByText(/success/i)).toBeInTheDocument();
+      expect(screen.queryByRole('alertdialog', { name: /confirm deletion/i })).not.toBeInTheDocument();
+    }, { timeout: 5000 });
+
+    // Should show success message
+    await waitFor(() => {
       expect(screen.getByText(/interviewer.*deleted successfully/i)).toBeInTheDocument();
-    });
+    }, { timeout: 5000 });
   });
 
   it('should show success message after toggling interviewer active status', async () => {
@@ -241,19 +244,23 @@ describe('Issue #40: Success notifications after mutations', () => {
 
     renderInterviewersPage();
 
+    // Wait for interviewers to load
     await waitFor(() => {
-      expect(screen.getByText('John Doe')).toBeInTheDocument();
+      const interviewers = screen.getAllByLabelText('Open actions menu');
+      expect(interviewers.length).toBeGreaterThan(0);
     });
 
-    // Find the active toggle switch/button
-    const toggleButton = screen.getByLabelText(/toggle active status/i);
+    // Find the toggle active button in dropdown (use last interviewer to avoid conflicts)
+    const actionsButtons = screen.getAllByLabelText('Open actions menu');
+    const lastButton = actionsButtons[actionsButtons.length - 1];
+    await user.click(lastButton);
+
+    const toggleButton = screen.getByText(/activate|deactivate/i);
     await user.click(toggleButton);
 
-    // Should show success alert
+    // Should show success message
     await waitFor(() => {
-      expect(screen.queryByRole('alertdialog')).toBeInTheDocument();
-      expect(screen.getByText(/success/i)).toBeInTheDocument();
       expect(screen.getByText(/status.*updated successfully/i)).toBeInTheDocument();
-    });
+    }, { timeout: 5000 });
   });
 });

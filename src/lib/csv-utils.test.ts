@@ -51,7 +51,6 @@ describe('CSV Export Functions', () => {
           role: 'Senior Engineer',
           skills: ['React', 'TypeScript'],
           is_active: true,
-          calendar_sync_enabled: false,
           timezone: 'America/Los_Angeles',
           created_at: '2024-01-01T00:00:00Z',
           updated_at: '2024-01-01T00:00:00Z',
@@ -84,7 +83,6 @@ describe('CSV Export Functions', () => {
           role: 'Tech Lead',
           skills: ['Python', 'Django', 'PostgreSQL'],
           is_active: true,
-          calendar_sync_enabled: true,
           timezone: 'America/New_York',
           created_at: '2024-01-02T00:00:00Z',
           updated_at: '2024-01-02T00:00:00Z',
@@ -171,8 +169,8 @@ describe('CSV Export Functions', () => {
 describe('CSV Import Functions', () => {
   describe('parseCsvFile', () => {
     it('should parse interviewer CSV file', async () => {
-      const csvContent = `id,name,email,role,skills,is_active,timezone,calendar_sync_enabled,created_at,updated_at
-1,John Doe,john@example.com,Senior Engineer,React; TypeScript,true,America/Los_Angeles,false,2024-01-01T00:00:00Z,2024-01-01T00:00:00Z`;
+      const csvContent = `id,name,email,role,skills,is_active,timezone,created_at,updated_at
+1,John Doe,john@example.com,Senior Engineer,React; TypeScript,true,America/Los_Angeles,2024-01-01T00:00:00Z,2024-01-01T00:00:00Z`;
       const file = {
         text: async () => csvContent,
         name: 'interviewers.csv',
@@ -251,7 +249,6 @@ describe('CSV Import Functions', () => {
           skills: 'React; TypeScript',
           is_active: 'true',
           timezone: 'America/Los_Angeles',
-          calendar_sync_enabled: 'false',
           created_at: '2024-01-01T00:00:00Z',
           updated_at: '2024-01-01T00:00:00Z',
         },
