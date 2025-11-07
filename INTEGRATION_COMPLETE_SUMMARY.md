@@ -9,6 +9,171 @@
 
 The **critical path** for full-stack integration is now complete! The frontend React application is now fully connected to the Fastify backend API with secure JWT authentication.
 
+📖 **[View Complete Architecture Documentation →](./ARCHITECTURE.md)**
+
+---
+
+## 🏛️ Architecture Overview
+
+### System Architecture (C4 Model - Level 1)
+
+```mermaid
+graph TB
+    subgraph "Users"
+        Admin[Admin Users]
+        Talent[Talent Users]
+        Viewer[Viewer Users]
+    end
+
+    subgraph "Interviewer Roster System"
+        Frontend[React Frontend<br/>Port 5173]
+        Backend[Fastify Backend<br/>Port 3000]
+        DB[(SQLite Database<br/>interviewer-roster.db)]
+    end
+
+    subgraph "External Systems"
+        GoogleOAuth[Google OAuth 2.0]
+    end
+
+    Admin -->|HTTPS| Frontend
+    Talent -->|HTTPS| Frontend
+    Viewer -->|HTTPS| Frontend
+
+    Frontend -->|REST API<br/>JWT Auth| Backend
+    Frontend -.->|OAuth Flow| GoogleOAuth
+    Backend -->|SQL Queries| DB
+    Backend -->|Audit Logs| DB
+
+    style Frontend fill:#61dafb,stroke:#333,stroke-width:2px
+    style Backend fill:#68a063,stroke:#333,stroke-width:2px
+    style DB fill:#003b57,stroke:#333,stroke-width:2px
+```
+
+### Technology Stack
+
+**Frontend:**
+- React 19 + Vite 6 (Build tool)
+- TypeScript (Type safety)
+- Tailwind CSS + shadcn/ui (UI framework)
+- React Router v7 (Client-side routing)
+- Vitest + React Testing Library (Testing)
+
+**Backend:**
+- Node.js 20+ with Fastify v5 (High-performance API)
+- SQLite 3 with better-sqlite3 (Database)
+- JWT for authentication (jsonwebtoken)
+- Swagger/OpenAPI documentation
+- Pino logger (Structured logging)
+
+### Component Architecture
+
+#### Frontend Structure
+```
+src/
+├── polymet/
+│   ├── pages/          # 15 page components (dashboard, interviewers, events, etc.)
+│   ├── components/     # 20+ reusable UI components
+│   └── data/           # Data layer (API client, auth context, database service)
+├── lib/                # Utilities (CSV, API client, formatters)
+└── test/               # Test files (123 tests, 94% passing)
+```
+
+#### Backend Structure
+```
+server/src/
+├── features/           # Feature modules (auth, interviewers, events, audit-logs)
+│   ├── auth/          # JWT authentication
+│   ├── interviewers/  # Interviewer CRUD
+│   ├── events/        # Interview event tracking
+│   └── audit-logs/    # Change tracking
+├── plugins/           # Fastify plugins (CORS, Swagger, JWT)
+└── db/                # Database setup, migrations, seed data
+```
+
+### Data Flow Architecture
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant Frontend
+    participant APIClient
+    participant Backend
+    participant Database
+
+    User->>Frontend: Click "Sign in with Google"
+    Frontend->>Backend: POST /api/auth/login
+    Backend->>Backend: Generate JWT token (7-day expiry)
+    Backend-->>Frontend: {token, user{email, name, role}}
+    Frontend->>Frontend: Store JWT in React state (memory)
+    Frontend->>APIClient: setToken(jwt)
+
+    User->>Frontend: View Interviewers
+    Frontend->>APIClient: GET /api/interviewers
+    APIClient->>Backend: GET /api/interviewers<br/>Authorization: Bearer {token}
+    Backend->>Backend: Verify JWT
+    Backend->>Database: SELECT * FROM interviewers
+    Database-->>Backend: Results
+    Backend->>Database: INSERT INTO audit_logs
+    Backend-->>Frontend: JSON response
+    Frontend->>User: Display interviewers
+```
+
+### Database Schema
+
+**Tables:**
+- `interviewers` - Interviewer profiles (name, email, role, skills, timezone, is_active)
+- `interview_events` - Interview tracking (interviewer_email, candidate, scheduled_date, status)
+- `audit_logs` - Change history (user, action, entity_type, entity_id, changes, timestamp)
+- `user_settings` - User preferences (coming soon)
+
+**Key Features:**
+- SQLite with WAL mode for concurrent access
+- Foreign keys enabled for referential integrity
+- Indexes on frequently queried columns (email, date, status)
+- Automatic timestamps (created_at, updated_at)
+
+### Security Architecture
+
+**6-Layer Security Model:**
+
+1. **Authentication Layer**: JWT tokens (7-day expiry, in-memory storage)
+2. **Authorization Layer**: Role-based access control (admin/talent/viewer)
+3. **Transport Security**: HTTPS in production, CORS configured
+4. **Input Validation**: JSON Schema validation on all API endpoints
+5. **XSS Protection**: JWT not in localStorage, React's built-in XSS protection
+6. **Audit Trail**: All mutations logged to audit_logs table
+
+### API Architecture
+
+**17 REST Endpoints** organized by feature:
+
+**Auth** (2 endpoints):
+- `POST /api/auth/login` - Authenticate user, generate JWT
+- `GET /api/auth/me` - Get current user info
+
+**Interviewers** (5 endpoints):
+- `GET /api/interviewers` - List all
+- `GET /api/interviewers/:id` - Get one
+- `POST /api/interviewers` - Create
+- `PUT /api/interviewers/:id` - Update
+- `DELETE /api/interviewers/:id` - Delete
+
+**Events** (6 endpoints):
+- `GET /api/events` - List all
+- `GET /api/events/:id` - Get one
+- `POST /api/events` - Create
+- `PUT /api/events/:id` - Update
+- `PATCH /api/events/:id/status` - Update status only
+- `DELETE /api/events/:id` - Delete
+
+**Audit Logs** (4 endpoints):
+- `GET /api/audit-logs` - List all
+- `GET /api/audit-logs/entity/:entityType/:entityId` - Get by entity
+- `GET /api/audit-logs/user/:userEmail` - Get by user
+- `GET /api/audit-logs/date-range` - Get by date range
+
+**Interactive Documentation**: http://localhost:3000/docs (Swagger UI)
+
 ---
 
 ## ✅ Completed GitHub Issues
