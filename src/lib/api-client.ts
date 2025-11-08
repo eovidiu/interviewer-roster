@@ -166,4 +166,9 @@ export class ApiClient {
 }
 
 // Export singleton instance
-export const apiClient = new ApiClient()
+// Get API URL from environment variable
+const apiUrl = import.meta.env.VITE_API_URL && import.meta.env.VITE_API_URL !== 'undefined'
+  ? import.meta.env.VITE_API_URL
+  : 'http://localhost:3000'
+
+export const apiClient = new ApiClient(`${apiUrl}/api`)
