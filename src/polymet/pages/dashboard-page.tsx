@@ -95,7 +95,6 @@ export function DashboardPage() {
       pendingEvents,
       noShowRate,
       activeInterviewers,
-      calendarSyncEnabled,
       interviewsPerWeek,
     };
   }, [interviewEvents, interviewers]);
@@ -179,7 +178,7 @@ export function DashboardPage() {
           value={kpiMetrics.activeInterviewers}
           icon={UsersIcon}
           status="neutral"
-          description={`${kpiMetrics.calendarSyncEnabled} with calendar sync`}
+          description="Total active interviewers"
         />
 
         <KpiMetricCard
