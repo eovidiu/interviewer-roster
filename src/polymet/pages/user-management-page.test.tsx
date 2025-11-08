@@ -309,7 +309,7 @@ describe('Issue #54: User Management Page', () => {
 
       // Should show error message
       await waitFor(() => {
-        expect(screen.getByText(/failed|error/i)).toBeInTheDocument()
+        expect(screen.getByText(/Failed to update role/i)).toBeInTheDocument()
       }, { timeout: 3000 })
     })
   })
