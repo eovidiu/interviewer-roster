@@ -1,10 +1,12 @@
 # Railway Deployment Guide
 
-This guide explains how to deploy the Interviewer Roster application to Railway and configure Google OAuth authentication for production.
+This guide explains how to deploy the Interviewer Roster application to Railway with a two-service architecture and configure Google OAuth authentication for production.
 
 ## Overview
 
-The application is deployed at: **https://interviewers.up.railway.app**
+The application is deployed with **two separate Railway services**:
+- **Frontend**: https://interviewers.up.railway.app (Vite SPA served by Caddy)
+- **Backend**: https://backend-production-269a.up.railway.app (Fastify API in Docker)
 
 ## Required Environment Variables
 
@@ -39,17 +41,19 @@ SWAGGER_ENABLED=true
 # Google OAuth 2.0 - CRITICAL for OAuth to work
 GOOGLE_CLIENT_ID=<your-client-id>.apps.googleusercontent.com
 GOOGLE_CLIENT_SECRET=<your-client-secret>
-GOOGLE_REDIRECT_URI=https://interviewers.up.railway.app/api/auth/google/callback
+GOOGLE_REDIRECT_URI=https://backend-production-269a.up.railway.app/api/auth/google/callback
 ```
 
 ### Frontend Environment Variables (Railway Service)
 
-If your frontend and backend are in the same Railway service, configure:
+The frontend service requires one environment variable to point to the backend API:
 
 ```bash
 # CRITICAL: Must match your Railway backend URL
-VITE_API_URL=https://interviewers.up.railway.app
+VITE_API_URL=https://backend-production-269a.up.railway.app
 ```
+
+**Note:** The frontend uses RAILPACK builder which auto-detects Vite and builds the static assets.
 
 ## Google Cloud Console Configuration
 
@@ -69,7 +73,7 @@ Add the following to **Authorized JavaScript origins**:
 
 ### 4. Update Authorized Redirect URIs
 Add the following to **Authorized redirect URIs**:
-- `https://interviewers.up.railway.app/api/auth/google/callback`
+- `https://backend-production-269a.up.railway.app/api/auth/google/callback`
 
 **Note:** Keep `http://localhost:3000/api/auth/google/callback` for local development.
 
@@ -83,7 +87,7 @@ Click the **Save** button at the bottom of the page.
 **Cause:** The redirect URI in your request doesn't match the ones configured in Google Cloud Console.
 
 **Solution:**
-1. Verify `GOOGLE_REDIRECT_URI` environment variable in Railway matches exactly: `https://interviewers.up.railway.app/api/auth/google/callback`
+1. Verify `GOOGLE_REDIRECT_URI` environment variable in Railway backend service matches exactly: `https://backend-production-269a.up.railway.app/api/auth/google/callback`
 2. Verify this exact URL is in your Google Cloud Console Authorized redirect URIs
 3. Wait a few minutes for Google's changes to propagate
 
@@ -124,13 +128,38 @@ Click the **Save** button at the bottom of the page.
 
 ## OAuth Flow in Production
 
-1. User clicks "Sign in with Google" → Frontend redirects to: `https://interviewers.up.railway.app/api/auth/google`
+1. User clicks "Sign in with Google" → Frontend redirects to: `https://backend-production-269a.up.railway.app/api/auth/google`
 2. Backend generates OAuth URL and redirects to Google login
 3. User authenticates with Google
-4. Google redirects back to: `https://interviewers.up.railway.app/api/auth/google/callback?code=...`
+4. Google redirects back to: `https://backend-production-269a.up.railway.app/api/auth/google/callback?code=...`
 5. Backend exchanges code for tokens and creates JWT
 6. Backend redirects to: `https://interviewers.up.railway.app/auth/callback?token=...`
 7. Frontend stores JWT and redirects to dashboard
+
+## Two-Service Architecture
+
+### Why Separate Services?
+
+Railway's auto-detection was treating the monorepo as a Vite SPA and deploying only the frontend with Caddy. This prevented the Fastify backend from running. The solution was to create two separate services:
+
+1. **Frontend Service (`interviewer-roster`)**: Uses RAILPACK to auto-detect and build the Vite application
+2. **Backend Service (`backend`)**: Uses Docker to run the Fastify API server
+
+### Service Configuration
+
+#### Backend Service
+- **Builder**: Docker (via `server/Dockerfile`)
+- **Environment Variable**: `RAILWAY_DOCKERFILE_PATH=server/Dockerfile`
+- **Root Directory**: Repository root (Dockerfile copies from `server/` directory)
+- **Port**: 3000
+- **Runtime**: Node 20 Alpine
+
+#### Frontend Service
+- **Builder**: RAILPACK (auto-detected)
+- **Web Server**: Caddy
+- **Port**: 8080
+- **Build Command**: `npm run build` (auto-detected)
+- **Serves**: `/dist` directory with SPA fallback routing
 
 ## Testing the Deployment
 
