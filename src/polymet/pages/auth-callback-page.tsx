@@ -42,14 +42,20 @@ export function AuthCallbackPage() {
     }
 
     try {
+      console.log('[AuthCallback] Received token:', token?.substring(0, 20) + '...')
+      console.log('[AuthCallback] Return URL:', returnUrl)
+
       // Sign in with the JWT token from backend
       signInWithToken(token)
+
+      console.log('[AuthCallback] Token processed successfully, navigating to:', returnUrl || '/')
 
       // Redirect to the original destination or dashboard
       navigate(returnUrl || '/', { replace: true })
     } catch (err) {
       console.error('Failed to process OAuth callback:', err)
-      setError('Failed to complete authentication. Please try again.')
+      console.error('Error details:', err instanceof Error ? err.message : String(err))
+      setError(`Failed to complete authentication: ${err instanceof Error ? err.message : 'Unknown error'}`)
     }
   }, [searchParams, navigate, signInWithToken])
 

@@ -118,9 +118,25 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   const signInWithToken = (jwtToken: string) => {
     try {
+      console.log('[signInWithToken] Starting token processing');
+      console.log('[signInWithToken] Token length:', jwtToken?.length);
+
+      if (!jwtToken || typeof jwtToken !== 'string') {
+        throw new Error('Invalid token: token is empty or not a string');
+      }
+
+      const parts = jwtToken.split('.');
+      console.log('[signInWithToken] Token parts count:', parts.length);
+
+      if (parts.length !== 3) {
+        throw new Error(`Invalid token format: expected 3 parts, got ${parts.length}`);
+      }
+
       // Decode JWT to get user info (Issue #55)
       // JWT format: header.payload.signature
-      const payload = JSON.parse(atob(jwtToken.split('.')[1]));
+      console.log('[signInWithToken] Decoding payload...');
+      const payload = JSON.parse(atob(parts[1]));
+      console.log('[signInWithToken] Payload decoded:', { email: payload.email, role: payload.role });
 
       // Store token in memory (NOT localStorage for security - see Issue #24)
       setToken(jwtToken);
@@ -138,7 +154,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
       console.log('✅ Logged in successfully with OAuth token');
     } catch (error) {
-      console.error('Failed to decode JWT token:', error);
+      console.error('[signInWithToken] Failed to decode JWT token:', error);
+      console.error('[signInWithToken] Token value:', jwtToken?.substring(0, 50) + '...');
       throw error;
     }
   };
