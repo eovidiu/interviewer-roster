@@ -178,6 +178,11 @@ export default async function authRoutes(fastify, _options) {
           fastify.log.warn('Failed to parse state parameter:', err)
         }
 
+        // Redirect viewers to schedule page by default (they can't access dashboard)
+        if (user.role === 'viewer' && returnUrl === '/') {
+          returnUrl = '/schedule'
+        }
+
         // Redirect to frontend with token
         const redirectUrl = `${process.env.CORS_ORIGIN}/auth/callback?token=${jwtToken}&returnUrl=${encodeURIComponent(returnUrl)}`
         return reply.redirect(redirectUrl)

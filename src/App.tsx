@@ -55,7 +55,9 @@ function ProtectedRoute({
   }
 
   if (allowedRoles && !allowedRoles.includes(user.role)) {
-    return <Navigate to="/" replace />;
+    // Redirect to schedule page for users without permission
+    // Viewers can't access dashboard, so send them to schedule instead
+    return <Navigate to="/schedule" replace />;
   }
 
   return <>{children}</>;
