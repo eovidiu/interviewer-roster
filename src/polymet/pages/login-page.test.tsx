@@ -37,9 +37,9 @@ describe('LoginPage - Error Handling', () => {
       </BrowserRouter>
     );
 
-    // Act - Click on the first user button (Admin)
-    const adminButton = await screen.findByText(/Ovidiu E/i);
-    await userEvent.click(adminButton);
+    // Act - Click on the first user button (TA User)
+    const taButton = await screen.findByText(/TA User/i);
+    await userEvent.click(taButton);
 
     // Assert - Error message should be displayed
     await waitFor(() => {
@@ -59,7 +59,7 @@ describe('LoginPage - Error Handling', () => {
         ok: true,
         json: async () => ({
           token: 'test-token',
-          user: { email: 'eovidiu@gmail.com', name: 'Ovidiu E', role: 'admin' }
+          user: { email: 'talent@example.com', name: 'TA User', role: 'talent' }
         })
       });
 
@@ -77,8 +77,8 @@ describe('LoginPage - Error Handling', () => {
     );
 
     // Act - First attempt fails
-    const adminButton = await screen.findByText(/Ovidiu E/i);
-    await userEvent.click(adminButton);
+    const taButton = await screen.findByText(/TA User/i);
+    await userEvent.click(taButton);
 
     // Assert - Error shown
     await waitFor(() => {
@@ -86,7 +86,7 @@ describe('LoginPage - Error Handling', () => {
     });
 
     // Act - Second attempt succeeds
-    await userEvent.click(adminButton);
+    await userEvent.click(taButton);
 
     // Assert - Should navigate to dashboard on success (error gone because component unmounted)
     await waitFor(() => {

@@ -25,12 +25,6 @@ interface DemoUser {
 
 const demoUsers: DemoUser[] = [
   {
-    email: "eovidiu@gmail.com",
-    name: "Ovidiu E",
-    role: "admin",
-    description: "Full access to all features including Database, Audit Logs, and Settings",
-  },
-  {
     email: "talent@example.com",
     name: "TA User",
     role: "talent",
