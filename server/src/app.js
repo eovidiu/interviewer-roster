@@ -39,7 +39,12 @@ export async function createApp() {
 
   // Register security plugins
   await fastify.register(helmet, {
-    contentSecurityPolicy: false // Disable for Swagger UI
+    contentSecurityPolicy: false, // Disable for Swagger UI
+    hsts: {
+      maxAge: 31536000, // 1 year in seconds
+      includeSubDomains: true,
+      preload: true
+    }
   })
 
   await fastify.register(cors, config.cors)
@@ -51,6 +56,17 @@ export async function createApp() {
 
   // Register utility plugins
   await fastify.register(sensible) // Adds useful HTTP helpers
+
+  // Disable TRACE method for security
+  fastify.addHook('onRequest', async (request, reply) => {
+    if (request.method === 'TRACE') {
+      reply.code(405).send({
+        error: 'Method Not Allowed',
+        message: 'TRACE method is not allowed',
+        statusCode: 405
+      })
+    }
+  })
 
   // Register infrastructure plugins
   await fastify.register(databasePlugin)
