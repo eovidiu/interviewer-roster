@@ -250,7 +250,7 @@ describe('Infrastructure Security Tests', () => {
           })
 
           expect(response.status).toBeGreaterThanOrEqual(400)
-          expect(response.headers['content-type']).not toContain('application/x-sqlite')
+          expect(response.headers['content-type']).not.toContain('application/x-sqlite')
         } catch (error) {
           // Expected - database should not be accessible
         }

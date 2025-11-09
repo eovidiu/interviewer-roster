@@ -11,9 +11,5 @@ export default {
   coverageDirectory: 'reports/coverage',
   coverageReporters: ['text', 'lcov', 'html'],
   moduleFileExtensions: ['js', 'json'],
-  transform: {},
-  extensionsToTreatAsEsm: ['.js'],
-  moduleNameMapper: {
-    '^(\\.{1,2}/.*)\\.js$': '$1'
-  }
+  transform: {}
 }
