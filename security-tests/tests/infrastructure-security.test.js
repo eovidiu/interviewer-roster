@@ -298,7 +298,8 @@ describe('Infrastructure Security Tests', () => {
           axios.post(`${backend}/api/auth/login`, {
             email: `test-${i}@example.com`,
             name: 'Test User'
-          }).catch(err => err.response)
+          }).then(res => ({ status: res.status }))
+            .catch(err => ({ status: err.response?.status }))
         )
       }
 

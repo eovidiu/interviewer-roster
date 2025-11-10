@@ -9,7 +9,7 @@
     "test:api": "node --experimental-vm-modules node_modules/jest/bin/jest.js tests/api-security.test.js",
     "test:infrastructure": "node --experimental-vm-modules node_modules/jest/bin/jest.js tests/infrastructure-security.test.js",
     "test:all": "node --experimental-vm-modules node_modules/jest/bin/jest.js --verbose",
-    "test:ci": "node --experimental-vm-modules node_modules/jest/bin/jest.js --ci --coverage --json --outputFile=reports/test-results.json",
+    "test:ci": "node --experimental-vm-modules node_modules/jest/bin/jest.js --ci --coverage --runInBand",
     "report": "node scripts/generate-report.js",
     "scan": "node scripts/security-scan.js",
     "check": "npm run test:all && npm run report"
