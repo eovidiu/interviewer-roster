@@ -10,8 +10,7 @@
  */
 
 import { describe, test, expect } from '@jest/globals'
-import axios from 'axios'
-import config from '../config/test-config.js'
+import config, { axiosInstance as axios } from '../config/test-config.js'
 
 describe('Infrastructure Security Tests', () => {
   const { backend, frontend, cors, securityHeaders } = config

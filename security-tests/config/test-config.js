@@ -4,6 +4,8 @@
  * Configure URLs and test parameters for security testing
  */
 
+import axios from 'axios'
+
 export const config = {
   // Application URLs
   frontend: process.env.FRONTEND_URL || 'https://interviewers.up.railway.app',
@@ -110,5 +112,22 @@ export const config = {
     INFO: 'INFO'
   }
 }
+
+/**
+ * Configured axios instance for security tests
+ *
+ * Fixes:
+ * 1. Redirect loop issue - maxRedirects: 5 (limited) prevents infinite redirect loops
+ * 2. Circular JSON error - httpAgent: false prevents Jest worker serialization issues
+ *
+ * Note: We allow up to 5 redirects to handle legitimate redirects (e.g., trailing slash)
+ * while still preventing infinite loops that were causing the original issue.
+ */
+export const axiosInstance = axios.create({
+  maxRedirects: 5, // Limited redirects to prevent loops, but allow legitimate redirects
+  httpAgent: false,
+  httpsAgent: false,
+  timeout: 30000
+})
 
 export default config
