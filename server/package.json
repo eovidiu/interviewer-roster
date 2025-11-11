@@ -10,6 +10,7 @@
     "db:migrate": "node scripts/migrate.js",
     "db:seed": "node scripts/seed.js",
     "db:reset": "node scripts/migrate.js && node scripts/seed.js",
+    "db:import": "node scripts/import-from-excel.js",
     "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js",
     "test:watch": "node --experimental-vm-modules node_modules/jest/bin/jest.js --watch",
     "test:coverage": "node --experimental-vm-modules node_modules/jest/bin/jest.js --coverage",
@@ -43,7 +44,8 @@
     "googleapis": "^164.1.0",
     "nanoid": "^5.0.9",
     "pino": "^9.5.0",
-    "pino-pretty": "^11.3.0"
+    "pino-pretty": "^11.3.0",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.11",

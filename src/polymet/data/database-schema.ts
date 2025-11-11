@@ -20,6 +20,36 @@ export interface InterviewerRecord {
   is_active: number; // SQLite boolean (0 or 1)
   created_at: string; // ISO date string
   updated_at: string; // ISO date string
+
+  // Migration 003 fields - onboarding & dates
+  date_in: string | null;
+
+  // Migration 003 fields - management & organization
+  manager: string | null;
+  check_manager: number; // SQLite boolean (0 or 1)
+  org: string | null;
+
+  // Migration 003 fields - interview profiles
+  profile_backend: number; // SQLite boolean (0 or 1)
+  profile_big_data: number; // SQLite boolean (0 or 1)
+  profile_frontend: number; // SQLite boolean (0 or 1)
+  profile_fullstack: number; // SQLite boolean (0 or 1)
+  profile_sre: number; // SQLite boolean (0 or 1)
+  profile_cse: number; // SQLite boolean (0 or 1)
+  profile_ml: number; // SQLite boolean (0 or 1)
+  profile_em: number; // SQLite boolean (0 or 1)
+
+  // Migration 003 fields - level & experience
+  max_level: number | null;
+  check_level: string | null;
+
+  // Migration 003 fields - availability & status
+  pause_until: string | null;
+  is_shadowing: number; // SQLite boolean (0 or 1)
+  onboarding_completed: number; // SQLite boolean (0 or 1)
+
+  // Migration 003 fields - work mode
+  is_remote: number; // SQLite boolean (0 or 1)
 }
 
 export interface InterviewEventRecord {

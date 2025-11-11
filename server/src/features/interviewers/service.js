@@ -22,7 +22,22 @@ export class InterviewerService {
       is_active: query.is_active,
       search: query.search,
       limit: query.limit || 50,
-      offset: query.offset || 0
+      offset: query.offset || 0,
+      // Migration 003 filters
+      org: query.org,
+      manager: query.manager,
+      profile_backend: query.profile_backend,
+      profile_big_data: query.profile_big_data,
+      profile_frontend: query.profile_frontend,
+      profile_fullstack: query.profile_fullstack,
+      profile_sre: query.profile_sre,
+      profile_cse: query.profile_cse,
+      profile_ml: query.profile_ml,
+      profile_em: query.profile_em,
+      min_level: query.min_level,
+      max_level: query.max_level,
+      onboarding_completed: query.onboarding_completed,
+      is_remote: query.is_remote
     }
 
     const interviewers = this.repository.findAll(filters)

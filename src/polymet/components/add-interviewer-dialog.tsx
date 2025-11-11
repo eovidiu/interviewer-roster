@@ -44,6 +44,25 @@ export function AddInterviewerDialog({
     timezone: "America/Los_Angeles",
     is_active: true,
     skills: [] as string[],
+    // Migration 003 fields
+    date_in: "",
+    manager: "",
+    check_manager: false,
+    org: "",
+    profile_backend: false,
+    profile_big_data: false,
+    profile_frontend: false,
+    profile_fullstack: false,
+    profile_sre: false,
+    profile_cse: false,
+    profile_ml: false,
+    profile_em: false,
+    max_level: null as number | null,
+    check_level: "",
+    pause_until: "",
+    is_shadowing: false,
+    onboarding_completed: false,
+    is_remote: false,
   });
   const [skillInput, setSkillInput] = useState("");
   const handleRoleChange = (value: string) => {
@@ -58,9 +77,28 @@ export function AddInterviewerDialog({
         name: interviewer.name,
         email: interviewer.email,
         role: interviewer.role,
-        timezone: interviewer.timezone,
+        timezone: interviewer.timezone || "America/Los_Angeles",
         is_active: interviewer.is_active,
         skills: interviewer.skills,
+        // Migration 003 fields
+        date_in: interviewer.date_in || "",
+        manager: interviewer.manager || "",
+        check_manager: interviewer.check_manager || false,
+        org: interviewer.org || "",
+        profile_backend: interviewer.profile_backend || false,
+        profile_big_data: interviewer.profile_big_data || false,
+        profile_frontend: interviewer.profile_frontend || false,
+        profile_fullstack: interviewer.profile_fullstack || false,
+        profile_sre: interviewer.profile_sre || false,
+        profile_cse: interviewer.profile_cse || false,
+        profile_ml: interviewer.profile_ml || false,
+        profile_em: interviewer.profile_em || false,
+        max_level: interviewer.max_level || null,
+        check_level: interviewer.check_level || "",
+        pause_until: interviewer.pause_until || "",
+        is_shadowing: interviewer.is_shadowing || false,
+        onboarding_completed: interviewer.onboarding_completed || false,
+        is_remote: interviewer.is_remote || false,
       });
     } else {
       setFormData({
@@ -70,6 +108,25 @@ export function AddInterviewerDialog({
         timezone: "America/Los_Angeles",
         is_active: true,
         skills: [],
+        // Migration 003 fields - defaults for new interviewer
+        date_in: "",
+        manager: "",
+        check_manager: false,
+        org: "",
+        profile_backend: false,
+        profile_big_data: false,
+        profile_frontend: false,
+        profile_fullstack: false,
+        profile_sre: false,
+        profile_cse: false,
+        profile_ml: false,
+        profile_em: false,
+        max_level: null,
+        check_level: "",
+        pause_until: "",
+        is_shadowing: false,
+        onboarding_completed: false,
+        is_remote: false,
       });
     }
   }, [interviewer, open]);
@@ -228,6 +285,250 @@ export function AddInterviewerDialog({
                 ))}
               </div>
             )}
+          </div>
+
+          {/* Migration 003 Fields - Organization & Management */}
+          <div className="space-y-4 pt-4 border-t border-border">
+            <h3 className="text-sm font-medium">Organization & Management</h3>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="org">Team/Organization</Label>
+                <Input
+                  id="org"
+                  placeholder="e.g., TeamA, Engineering"
+                  value={formData.org}
+                  onChange={(e) =>
+                    setFormData({ ...formData, org: e.target.value })
+                  }
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="manager">Manager</Label>
+                <Input
+                  id="manager"
+                  placeholder="Manager name"
+                  value={formData.manager}
+                  onChange={(e) =>
+                    setFormData({ ...formData, manager: e.target.value })
+                  }
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="date_in">Start Date</Label>
+                <Input
+                  id="date_in"
+                  type="date"
+                  value={formData.date_in}
+                  onChange={(e) =>
+                    setFormData({ ...formData, date_in: e.target.value })
+                  }
+                />
+              </div>
+
+              <div className="flex items-center space-x-2 pt-6">
+                <Switch
+                  id="check_manager"
+                  checked={formData.check_manager}
+                  onCheckedChange={(checked) =>
+                    setFormData({ ...formData, check_manager: checked })
+                  }
+                />
+                <Label htmlFor="check_manager">Requires Manager Approval</Label>
+              </div>
+            </div>
+          </div>
+
+          {/* Migration 003 Fields - Interview Profiles */}
+          <div className="space-y-4 pt-4 border-t border-border">
+            <h3 className="text-sm font-medium">Interview Profiles</h3>
+            <p className="text-xs text-muted-foreground">Select interview types this person can conduct</p>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="flex items-center space-x-2">
+                <Switch
+                  id="profile_backend"
+                  checked={formData.profile_backend}
+                  onCheckedChange={(checked) =>
+                    setFormData({ ...formData, profile_backend: checked })
+                  }
+                />
+                <Label htmlFor="profile_backend">Backend</Label>
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <Switch
+                  id="profile_frontend"
+                  checked={formData.profile_frontend}
+                  onCheckedChange={(checked) =>
+                    setFormData({ ...formData, profile_frontend: checked })
+                  }
+                />
+                <Label htmlFor="profile_frontend">Frontend</Label>
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <Switch
+                  id="profile_fullstack"
+                  checked={formData.profile_fullstack}
+                  onCheckedChange={(checked) =>
+                    setFormData({ ...formData, profile_fullstack: checked })
+                  }
+                />
+                <Label htmlFor="profile_fullstack">Fullstack</Label>
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <Switch
+                  id="profile_sre"
+                  checked={formData.profile_sre}
+                  onCheckedChange={(checked) =>
+                    setFormData({ ...formData, profile_sre: checked })
+                  }
+                />
+                <Label htmlFor="profile_sre">SRE</Label>
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <Switch
+                  id="profile_big_data"
+                  checked={formData.profile_big_data}
+                  onCheckedChange={(checked) =>
+                    setFormData({ ...formData, profile_big_data: checked })
+                  }
+                />
+                <Label htmlFor="profile_big_data">Big Data</Label>
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <Switch
+                  id="profile_cse"
+                  checked={formData.profile_cse}
+                  onCheckedChange={(checked) =>
+                    setFormData({ ...formData, profile_cse: checked })
+                  }
+                />
+                <Label htmlFor="profile_cse">CSE</Label>
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <Switch
+                  id="profile_ml"
+                  checked={formData.profile_ml}
+                  onCheckedChange={(checked) =>
+                    setFormData({ ...formData, profile_ml: checked })
+                  }
+                />
+                <Label htmlFor="profile_ml">ML/AI</Label>
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <Switch
+                  id="profile_em"
+                  checked={formData.profile_em}
+                  onCheckedChange={(checked) =>
+                    setFormData({ ...formData, profile_em: checked })
+                  }
+                />
+                <Label htmlFor="profile_em">Engineering Manager</Label>
+              </div>
+            </div>
+          </div>
+
+          {/* Migration 003 Fields - Level & Experience */}
+          <div className="space-y-4 pt-4 border-t border-border">
+            <h3 className="text-sm font-medium">Level & Experience</h3>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="max_level">Maximum Interview Level</Label>
+                <Input
+                  id="max_level"
+                  type="number"
+                  placeholder="e.g., 50, 60, 70"
+                  value={formData.max_level || ""}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      max_level: e.target.value ? parseInt(e.target.value) : null
+                    })
+                  }
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="check_level">Check Level</Label>
+                <Input
+                  id="check_level"
+                  placeholder="e.g., ESEP40, ESEP50"
+                  value={formData.check_level}
+                  onChange={(e) =>
+                    setFormData({ ...formData, check_level: e.target.value })
+                  }
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Migration 003 Fields - Status & Availability */}
+          <div className="space-y-4 pt-4 border-t border-border">
+            <h3 className="text-sm font-medium">Status & Availability</h3>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="pause_until">Paused Until</Label>
+                <Input
+                  id="pause_until"
+                  type="date"
+                  value={formData.pause_until}
+                  onChange={(e) =>
+                    setFormData({ ...formData, pause_until: e.target.value })
+                  }
+                />
+                <p className="text-xs text-muted-foreground">
+                  Interviewer won't be scheduled until this date
+                </p>
+              </div>
+
+              <div className="space-y-3 pt-2">
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    id="is_shadowing"
+                    checked={formData.is_shadowing}
+                    onCheckedChange={(checked) =>
+                      setFormData({ ...formData, is_shadowing: checked })
+                    }
+                  />
+                  <Label htmlFor="is_shadowing">Currently Shadowing</Label>
+                </div>
+
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    id="onboarding_completed"
+                    checked={formData.onboarding_completed}
+                    onCheckedChange={(checked) =>
+                      setFormData({ ...formData, onboarding_completed: checked })
+                    }
+                  />
+                  <Label htmlFor="onboarding_completed">Onboarding Complete</Label>
+                </div>
+
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    id="is_remote"
+                    checked={formData.is_remote}
+                    onCheckedChange={(checked) =>
+                      setFormData({ ...formData, is_remote: checked })
+                    }
+                  />
+                  <Label htmlFor="is_remote">Remote Interviewer</Label>
+                </div>
+              </div>
+            </div>
           </div>
 
           <div className="space-y-4 pt-4 border-t border-border">
