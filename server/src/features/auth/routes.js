@@ -108,35 +108,51 @@ export default async function authRoutes(fastify, _options) {
         }
 
         // Find or create user in database
-        let user = userRepository.findByEmail(email)
+        let user
+        try {
+          user = userRepository.findByEmail(email)
+        } catch (dbErr) {
+          fastify.log.error('Database error finding user:', dbErr.message)
+          throw new Error(`Failed to query user: ${dbErr.message}`)
+        }
 
         if (!user) {
           // Create new user with default role (viewer)
           // Special case: eovidiu@gmail.com gets admin role
           const role = email === 'eovidiu@gmail.com' ? 'admin' : 'viewer'
 
-          user = userRepository.create({
-            email,
-            name,
-            role,
-            picture,
-          })
+          try {
+            user = userRepository.create({
+              email,
+              name,
+              role,
+              picture,
+            })
+          } catch (createErr) {
+            fastify.log.error('Failed to create user:', createErr.message)
+            throw new Error(`Failed to create user: ${createErr.message}`)
+          }
 
           // Log user creation in audit log
-          await fastify.db
-            .prepare(
-              `INSERT INTO audit_logs (id, user_email, user_name, action, entity_type, entity_id, changes, timestamp)
-               VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'))`
-            )
-            .run(
-              randomUUID(),
-              email,
-              user.name,
-              'CREATE_USER',
-              'user',
-              user.id,
-              JSON.stringify({ role: user.role, oauth_provider: 'google' })
-            )
+          try {
+            await fastify.db
+              .prepare(
+                `INSERT INTO audit_logs (id, user_email, user_name, action, entity_type, entity_id, changes, timestamp)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'))`
+              )
+              .run(
+                randomUUID(),
+                email,
+                user.name,
+                'CREATE_USER',
+                'user',
+                user.id,
+                JSON.stringify({ role: user.role, oauth_provider: 'google' })
+              )
+          } catch (auditErr) {
+            // Log but don't fail - audit logging failure shouldn't break OAuth
+            fastify.log.warn('Failed to create audit log:', auditErr.message)
+          }
 
           fastify.log.info(`New user created via OAuth: ${email} (${role})`)
         } else {
@@ -187,10 +203,26 @@ export default async function authRoutes(fastify, _options) {
         const redirectUrl = `${process.env.CORS_ORIGIN}/auth/callback?token=${jwtToken}&returnUrl=${encodeURIComponent(returnUrl)}`
         return reply.redirect(redirectUrl)
       } catch (err) {
-        console.error('Full OAuth error object:', err)
-        fastify.log.error('OAuth callback error:', err.message)
-        fastify.log.error('Error stack:', err.stack)
-        fastify.log.error('Error details:', JSON.stringify(err, null, 2))
+        // Enhanced error logging for debugging OAuth failures
+        fastify.log.error({
+          errorMessage: err.message,
+          errorStack: err.stack,
+          errorName: err.name,
+          errorCode: err.code,
+          googleClientId: process.env.GOOGLE_CLIENT_ID ? 'SET' : 'NOT_SET',
+          googleClientSecret: process.env.GOOGLE_CLIENT_SECRET ? 'SET' : 'NOT_SET',
+          redirectUri: process.env.GOOGLE_REDIRECT_URI,
+          corsOrigin: process.env.CORS_ORIGIN,
+          databasePath: process.env.DATABASE_PATH
+        }, 'OAuth callback error details')
+
+        console.error('OAuth Error:', {
+          message: err.message,
+          name: err.name,
+          code: err.code,
+          stack: err.stack
+        })
+
         return reply.redirect(`${process.env.CORS_ORIGIN}/login?error=auth_failed`)
       }
     }
