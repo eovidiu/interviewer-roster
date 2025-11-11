@@ -1,5 +1,8 @@
 -- Migration 003: Add Interviewer Team Fields
 -- Adds fields from TheInterviewTeam.xlsx to interviewers table
+-- These ALTER TABLE statements are safe to run multiple times because:
+-- 1. The database plugin catches "column already exists" errors
+-- 2. Indexes with IF NOT EXISTS won't fail on re-run
 
 -- Onboarding & Dates
 ALTER TABLE interviewers ADD COLUMN date_in TEXT;

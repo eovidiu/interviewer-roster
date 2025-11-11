@@ -61,6 +61,8 @@ CREATE TABLE IF NOT EXISTS users (
   role TEXT NOT NULL CHECK (role IN ('viewer', 'talent', 'admin')),
   google_id TEXT UNIQUE,
   password_hash TEXT, -- For local auth (optional)
+  picture TEXT, -- Avatar from Google OAuth
+  last_login_at TEXT, -- Track login activity
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 );

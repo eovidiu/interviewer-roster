@@ -1,6 +1,11 @@
 import fp from 'fastify-plugin'
 import Database from 'better-sqlite3'
+import { readFileSync } from 'fs'
+import { join, dirname } from 'path'
+import { fileURLToPath } from 'url'
 import config from '../config/index.js'
+
+const __dirname = dirname(fileURLToPath(import.meta.url))
 
 /**
  * Database plugin using better-sqlite3
@@ -17,6 +22,57 @@ async function databasePlugin(fastify, _options) {
   // Enable WAL mode for better concurrency
   db.pragma('journal_mode = WAL')
   db.pragma('foreign_keys = ON')
+
+  // Run database migrations
+  // Check if we need to run migrations by testing if the users table exists
+  const checkUsersTable = () => {
+    try {
+      db.prepare('SELECT 1 FROM users LIMIT 1').get()
+      return true
+    } catch (err) {
+      return false
+    }
+  }
+
+  try {
+    if (!checkUsersTable()) {
+      fastify.log.info('Initializing database schema with migrations')
+      const migrationsDir = join(__dirname, '../db/migrations')
+      const migrations = [
+        '001_initial.sql',
+        '002_add_user_fields.sql',
+        '003_add_interviewer_team_fields.sql'
+      ]
+
+      for (const migrationFile of migrations) {
+        try {
+          const migrationPath = join(migrationsDir, migrationFile)
+          const sql = readFileSync(migrationPath, 'utf-8')
+          db.exec(sql)
+          fastify.log.debug({ migration: migrationFile }, 'Migration executed')
+        } catch (migrationErr) {
+          // Log but continue - some migrations might be idempotent or already applied
+          // e.g., ALTER TABLE ADD COLUMN might fail if column already exists
+          const errorMsg = migrationErr.message.toLowerCase()
+          if (errorMsg.includes('duplicate column') ||
+              errorMsg.includes('already exists') ||
+              (errorMsg.includes('column') && errorMsg.includes('already'))) {
+            fastify.log.debug({ migration: migrationFile, reason: migrationErr.message }, 'Migration already applied, skipping')
+          } else {
+            // Re-throw if it's a different error
+            throw migrationErr
+          }
+        }
+      }
+
+      fastify.log.info('All database migrations completed successfully')
+    } else {
+      fastify.log.debug('Database schema already initialized')
+    }
+  } catch (err) {
+    fastify.log.error({ err }, 'Failed to run migrations')
+    throw new Error(`Database migration failed: ${err.message}`)
+  }
 
   // Decorator to expose database instance
   fastify.decorate('db', db)
