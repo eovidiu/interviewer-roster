@@ -121,3 +121,4 @@ Add new tests alongside UI or hooks when behavior grows more complex.
 - `src/test` – Vitest setup (`setup.ts`) and smoke suites.
 
 Refer to `AGENTS.md` for broader contribution guidelines and workflow expectations.
+// Trigger frontend deployment Wed Nov 12 00:04:11 EET 2025
