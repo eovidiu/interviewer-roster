@@ -18,27 +18,51 @@ db.pragma('journal_mode = WAL')
 db.pragma('foreign_keys = ON')
 
 try {
-  // Read and execute migration file
-  const migrationPath = join(__dirname, '../src/db/migrations/001_initial.sql')
-  const migration = readFileSync(migrationPath, 'utf-8')
+  // Run migrations in order
+  const migrations = [
+    '001_initial.sql',
+    '002_add_user_fields.sql',
+    '003_add_interviewer_team_fields.sql'
+  ]
 
-  // Split by semicolon and execute each statement
-  const statements = migration
-    .split(';')
-    .map(stmt => stmt.trim())
-    .filter(stmt => stmt.length > 0)
+  for (const migrationFile of migrations) {
+    console.log(`\n📝 Running migration: ${migrationFile}`)
+    const migrationPath = join(__dirname, '../src/db/migrations', migrationFile)
 
-  statements.forEach((stmt, index) => {
     try {
-      db.exec(stmt)
-      console.log(`✅ Executed statement ${index + 1}/${statements.length}`)
-    } catch (err) {
-      console.error(`❌ Error in statement ${index + 1}:`, err.message)
-      console.error(`Statement:`, stmt.substring(0, 100))
-    }
-  })
+      const migration = readFileSync(migrationPath, 'utf-8')
 
-  console.log('✅ Migrations completed successfully')
+      // Split by semicolon and execute each statement
+      const statements = migration
+        .split(';')
+        .map(stmt => stmt.trim())
+        .filter(stmt => stmt.length > 0)
+
+      statements.forEach((stmt, index) => {
+        try {
+          db.exec(stmt)
+          console.log(`  ✅ Statement ${index + 1}/${statements.length}`)
+        } catch (err) {
+          // Ignore "duplicate column" errors for idempotency
+          if (err.message.includes('duplicate column')) {
+            console.log(`  ⚠️  Column already exists (skipping)`)
+          } else {
+            throw err
+          }
+        }
+      })
+
+      console.log(`  ✅ ${migrationFile} completed`)
+    } catch (err) {
+      if (err.code === 'ENOENT') {
+        console.log(`  ⚠️  Migration file not found, skipping: ${migrationFile}`)
+      } else {
+        throw err
+      }
+    }
+  }
+
+  console.log('\n✅ All migrations completed successfully')
 } catch (error) {
   console.error('❌ Migration failed:', error)
   process.exit(1)

@@ -5,11 +5,42 @@ export interface Interviewer {
   skills: string[];
   role: "viewer" | "talent" | "admin";
   is_active: boolean;
-  timezone: string;
+  timezone?: string;
   created_at: string;
-  created_by: string;
-  modified_at: string;
-  modified_by: string;
+  created_by?: string;
+  modified_at?: string;
+  modified_by?: string;
+  updated_at?: string;
+
+  // Migration 003 fields - onboarding & dates
+  date_in?: string | null;
+
+  // Migration 003 fields - management & organization
+  manager?: string | null;
+  check_manager?: boolean;
+  org?: string | null;
+
+  // Migration 003 fields - interview profiles
+  profile_backend?: boolean;
+  profile_big_data?: boolean;
+  profile_frontend?: boolean;
+  profile_fullstack?: boolean;
+  profile_sre?: boolean;
+  profile_cse?: boolean;
+  profile_ml?: boolean;
+  profile_em?: boolean;
+
+  // Migration 003 fields - level & experience
+  max_level?: number | null;
+  check_level?: string | null;
+
+  // Migration 003 fields - availability & status
+  pause_until?: string | null;
+  is_shadowing?: boolean;
+  onboarding_completed?: boolean;
+
+  // Migration 003 fields - work mode
+  is_remote?: boolean;
 }
 
 export const mockInterviewers: Interviewer[] = [
